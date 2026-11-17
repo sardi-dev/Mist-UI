@@ -20,25 +20,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-================================================================================
-ORIGIN AND BUNDLED THIRD-PARTY COMPONENTS
-================================================================================
-
-Mist-UI is based on DragonUI by NeticSoul and contributors
-(https://github.com/NeticSoul/DragonUI), which is released under the MIT
-License above. docs/UPSTREAM.md records the exact upstream commit and what was
-taken from it.
-
-Mist-UI bundles third-party libraries and fonts with their own licenses, and
-contains code adapted from other MIT-licensed addons. See, in the MistUI addon
-folder:
-  - THIRD_PARTY_NOTICES.md (what each component is and where it is used)
-  - LICENSES/ (full license texts)
-
-This repository contains no game artwork. The texture files the addon draws
-with are owned by the game's publisher, are not covered by the MIT License
-above, and are obtained separately (see docs/ARTWORK.md).
-
-When distributing or modifying Mist-UI, comply with the licenses of all bundled
-components.

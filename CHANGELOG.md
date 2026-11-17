@@ -6,6 +6,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **License shown as MIT on GitHub** (2026-11-17)
+  - Summary: The root LICENSE file is now the plain MIT text with both copyright lines; the note on the origin, bundled components and artwork stays in the README's Credits and License sections and in the addon folders' own LICENSE.txt files.
+  - Why: The extra section stopped GitHub from recognising the license, so the repository showed no license.
+
 ## [0.1.0] - 2026-11-17
 
 ### Added
