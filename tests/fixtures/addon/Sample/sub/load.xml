@@ -1,0 +1,6 @@
+<Ui>
+    <!-- <Script file="commented_out.lua"/> -->
+    <Script file="second.lua"/>
+    <Include file="more.xml"/>
+    <Frame name="SampleTemplate" virtual="true"/>
+</Ui>

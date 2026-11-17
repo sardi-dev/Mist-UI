@@ -1,0 +1,32 @@
+# Artwork is kept out of this repository (see docs/ARTWORK.md)
+/MistUI/Textures/
+/MistUI_Options/Textures/
+
+# Release zips (npm run release)
+/dist/
+
+# Tooling dependencies
+node_modules/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Logs and test reports
+*.log
+test-results/
+
+# Private data folders
+exports/
+backups/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Backup files
+*.bak

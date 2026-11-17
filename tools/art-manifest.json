@@ -1,0 +1,33 @@
+{
+  "upstream": {
+    "repository": "https://github.com/NeticSoul/DragonUI",
+    "commit": "407dd0069f2b853388483e9e7e169198abf4c6d0"
+  },
+  "copy": [
+    {
+      "from": "DragonUI/Textures",
+      "to": "MistUI/Textures",
+      "exclude": [
+        "CharacterPanel",
+        "Collections",
+        "Mail",
+        "Merchant",
+        "NewLevelUp",
+        "Professions",
+        "Spellbook",
+        "SwingTimer",
+        "Talents",
+        "Taxi"
+      ],
+      "include": [
+        "CharacterPanel/collapsebuttons.tga",
+        "CharacterPanel/scrollbararrows.tga",
+        "CharacterPanel/scrollbarthumb.tga"
+      ]
+    },
+    {
+      "from": "DragonUI_Options/Textures",
+      "to": "MistUI_Options/Textures"
+    }
+  ]
+}

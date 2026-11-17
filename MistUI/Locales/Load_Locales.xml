@@ -1,0 +1,8 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- MistUI Core Locales -->
+	<!-- English is the default locale and the only one for now -->
+	<Script file="enUS.lua"/>
+
+	<!-- Defines addon.GetActiveLocale, which config.lua calls from MistUI.xml right after this -->
+	<Script file="locale_override.lua"/>
+</Ui>

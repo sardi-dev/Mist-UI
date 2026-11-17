@@ -1,0 +1,7 @@
+<Ui>
+    <Frame name="KnownTemplate" virtual="true">
+        <Layers><Layer><Texture name="$parentIcon"/></Layer></Layers>
+        <Scripts><OnLoad>self:RegisterEvent("PLAYER_LOGIN");</OnLoad></Scripts>
+    </Frame>
+    <Button name="ActionButton1" inherits="KnownTemplate"/>
+</Ui>

@@ -1,0 +1,50 @@
+# Names that "npm run check" cannot find in the stock 5.4.8 interface source
+# but that were verified by hand. One name per line; the text after "#" says
+# how it was verified. Keep the list short: an entry hides the name everywhere.
+
+# Lua base functions that the stock interface code happens not to use.
+rawset                  # Lua 5.1 base library; name present in the 18414 client
+xpcall                  # Lua 5.1 base library; name present in the 18414 client
+
+# Client functions that the stock interface code never calls.
+hooksecurefunc          # name present in the 18414 client
+IsLoggedIn              # name present in the 18414 client
+GetAddOnMetadata        # name present in the 18414 client
+SetBindingClick         # name present in the 18414 client
+EnumerateFrames         # name present in the 18414 client
+CreateFont              # name present in the 18414 client
+GetInventoryItemQuality # name present in the 18414 client
+GetCoinTextureString    # name present in the 18414 client
+IsIndoors               # name present in the 18414 client
+GetPlayerFacing         # name present in the 18414 client
+debugprofilestop        # name present in the 18414 client
+UnitIsAFK               # name present in the 18414 client
+GetItemFamily           # name present in the 18414 client
+GetFunctionCPUUsage     # name present in the 18414 client; script profiler
+UpdateAddOnCPUUsage     # name present in the 18414 client; script profiler
+GetAddOnCPUUsage        # name present in the 18414 client; script profiler
+GetFrameCPUUsage        # name present in the 18414 client; script profiler
+GetEventCPUUsage        # name present in the 18414 client; script profiler
+ResetCPUUsage           # name present in the 18414 client; script profiler
+
+# Events that the stock interface code never registers.
+UNIT_TARGET             # name present in the 18414 client
+UI_SCALE_CHANGED        # name present in the 18414 client
+UNIT_THREAT_LIST_UPDATE # name present in the 18414 client
+UPDATE_MOUSEOVER_UNIT   # name present in the 18414 client
+
+# Console variables that the stock interface code never reads.
+realmList               # name present in the 18414 client; read by AceDB-3.0
+threatWarning           # name present in the 18414 client
+scriptProfile           # name present in the 18414 client; turns the script profiler on
+
+# Defined by bundled libraries in a way the checker cannot follow.
+LibStub                 # libs/LibStub/LibStub.lua assigns it through _G[name]
+
+# Optional globals: the code that reads them accepts nil.
+GAME_LOCALE             # AceLocale test override, read as "GAME_LOCALE or GetLocale()"
+TargetFrameSpellBar     # created by stock TargetFrame_CreateSpellbar as <frame name>.."SpellBar"
+FocusFrameSpellBar      # created by stock TargetFrame_CreateSpellbar as <frame name>.."SpellBar"
+TargetFrameToT          # stock TargetFrame.lua builds the name as <frame name>.."ToT"; read behind an "and" guard
+io                      # LibDeflate command-line branch, guarded by "if io and os"
+os                      # LibDeflate command-line branch, guarded by "if io and os"

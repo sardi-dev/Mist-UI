@@ -1,0 +1,5 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- MistUI_Options Locales -->
+	<!-- English is the default locale and the only one for now -->
+	<Script file="enUS.lua"/>
+</Ui>

@@ -1,0 +1,25 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+    
+    <!-- MistUI Core Files -->
+    <!-- Load order: api -> position_presets -> commands -->
+    <!-- Note: fonts.lua loads earlier via MistUI.xml (before config.lua) -->
+    
+    <Script file="api.lua"/>
+    <Script file="reload.lua"/>
+    <Script file="texture_warmup.lua"/>
+    <Script file="artwork_check.lua"/>
+    <Script file="spec_profiles.lua"/>
+    <Script file="editor_settings.lua"/>
+    <Script file="editor_panel.lua"/>
+    <Script file="editor_snap.lua"/>
+    <Script file="position_presets.lua"/>
+    <Script file="commands.lua"/>
+    <Script file="gamemenu_button.lua"/>
+    <Script file="platedump.lua"/>
+    <Script file="perf.lua"/>
+    <Script file="visibility_fade.lua"/>
+    <Script file="uiscale.lua"/>
+    <!-- module_base.lua / movers.lua removed - EditableFrames + PositionPresets own layout -->
+    
+</Ui>

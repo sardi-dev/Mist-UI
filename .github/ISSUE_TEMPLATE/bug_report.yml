@@ -1,0 +1,98 @@
+name: Bug report
+description: Something in Mist-UI looks wrong, breaks or shows an error.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Mist-UI. One problem per report, please. Search the open issues first: if
+        the problem is already reported, add what you saw there instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: Mist-UI version
+      description: Shown in the AddOns list and on the General tab of the settings (`/mist`).
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: server
+    attributes:
+      label: Server
+      description: The kind of 5.4.8 server you play on (core name if you know it), not its address.
+      placeholder: "SkyFire-based 5.4.8"
+    validations:
+      required: true
+
+  - type: input
+    id: character
+    attributes:
+      label: Class, specialization and level
+      placeholder: "Monk, Brewmaster, 90"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Part of the interface
+      options:
+        - Unit frames (player, target, focus, party, boss)
+        - Class resources
+        - Action bars
+        - Cast bars
+        - Buffs and debuffs
+        - Minimap
+        - Nameplates
+        - World map
+        - Bags, bank, bag sort
+        - Item level, quality, comparison
+        - Chat or tooltips
+        - Edit mode or settings
+        - Artwork install script
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: As exact as you can, including whether you were in combat, in a group or in a vehicle.
+      placeholder: |
+        1. Log in
+        2. Open the bags
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: errors
+    attributes:
+      label: Error text
+      description: |
+        Type `/mist errors` in game and copy what it shows, or copy the `errorLog` part of
+        `WTF/Account/<account>/SavedVariables/MistUI.lua` (written on logout or `/reload`).
+        Remove your account name if it appears.
+      render: text
+
+  - type: textarea
+    id: addons
+    attributes:
+      label: Other addons
+      description: Does the problem still happen with every other addon switched off? List the ones you use.
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Optional. Crop out chat, names and anything personal.

@@ -1,0 +1,90 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!--
+        Feature modules, in load order.
+
+        A module is listed here once it has been ported to the 5.4.8 client
+        and passes "npm run check". The other files in this folder are parked:
+        they are on disk but the client never loads them.
+    -->
+
+    <!-- Player buffs and debuffs, and the borders drawn around aura icons -->
+    <Script file="buff_frame.lua"/>
+    <Script file="auraborders.lua"/>
+
+    <!-- Minimap -->
+    <Script file="minimap_collector.lua"/>
+    <Script file="minimap.lua"/>
+    <Script file="minimap_ping.lua"/>
+
+    <!-- Cast bars (player, target, focus) and the global cooldown indicator -->
+    <Script file="castbar.lua"/>
+    <Script file="gcd.lua"/>
+
+    <!-- Unit frames: player, target, focus, their targets, party, pet, totem timers, combo points -->
+    <Include file="unitframes\unitframes.xml"/>
+
+    <!-- Tooltips: class colours, health bar, target line, movable anchor -->
+    <Script file="tooltip.lua"/>
+
+    <!-- Chat: fading buttons, edit box position, link tooltips, address and text copy -->
+    <Script file="chatmods.lua"/>
+
+    <!-- Countdown numbers on action button cooldowns -->
+    <Script file="cooldowns.lua"/>
+
+    <!-- Quest tracker: the stock tracker, placed below the minimap and movable -->
+    <Script file="questtracker.lua"/>
+
+    <!-- Bag windows: red tint on unusable items, glow on new items, window skin (in this order) -->
+    <Script file="bags_usability.lua"/>
+    <Script file="bags_newitems.lua"/>
+    <Script file="bags_skin.lua"/>
+
+    <!-- Bagster: one window for all bags, one for the bank and one for the guild bank, with
+         item categories and search; replaces the stock bag windows while it is on -->
+    <Include file="bagster\bagster.xml"/>
+
+    <!-- Micro menu and bag bar: the stock buttons in two bars of their own (in this order) -->
+    <Script file="micromenu.lua"/>
+    <Script file="bagbar.lua"/>
+
+    <!-- Action buttons: frame, slot, icon shape, state rings, key and macro text; then
+         unlight a button whose slot became empty while it was lit -->
+    <Script file="buttons.lua"/>
+    <Script file="actionbars\checkedstate.lua"/>
+
+    <!-- Action bars: layout and art of the main bar and the four extra bars, then the
+         experience and reputation bars below them and the stance, pet and possess rows
+         above them (in this order) -->
+    <Script file="mainbars.lua"/>
+    <Script file="xprepbar.lua"/>
+    <Script file="smallbars.lua"/>
+
+    <!-- Vehicle and override bar: the stock bar in the main bar's look (art only) -->
+    <Include file="actionbars\overridebar.xml"/>
+    <!-- Nameplates: the client's plates restyled; units found by name, target and combat log -->
+    <Include file="nameplates\nameplates.xml"/>
+
+    <!-- World map: the stock windowed map in a new window with a breadcrumb, zoom, coordinates,
+         group member pins and a quest list side panel -->
+    <Include file="worldmap\worldmap.xml"/>
+
+    <!-- Extras (decision 0009). Bag helpers: sorting, other characters' gold and item counts -->
+    <Script file="bagsort.lua"/>
+    <Script file="altmoney.lua"/>
+    <Script file="itemownership.lua"/>
+
+    <!-- Item info: quality borders, item level, comparison tooltips -->
+    <Script file="itemquality.lua"/>
+    <Script file="itemlevel.lua"/>
+    <Script file="equipmentcompare.lua"/>
+
+    <!-- Loot roll frames, low health alert, personal resource bar -->
+    <Script file="lootroll.lua"/>
+    <Script file="hp_low_alert.lua"/>
+    <Script file="raidframes.lua"/>
+    <Script file="personalresource.lua"/>
+
+    <!-- Edit mode: every other module registers the frames it lets the player move here -->
+    <Script file="editor_mode.lua"/>
+</Ui>

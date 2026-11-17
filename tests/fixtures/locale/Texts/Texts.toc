@@ -1,0 +1,6 @@
+## Interface: 50400
+## Title: Texts
+
+Locales\enUS.lua
+libs\lib.lua
+main.lua

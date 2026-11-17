@@ -1,0 +1,24 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- The main bar's frame art without its secure root: this one only decorates the stock
+         override bar, which keeps every button and every state change. -->
+    <Frame name="MistUIOverrideBarArtTemplate" virtual="true">
+        <Frames>
+            <Frame parentKey="BorderArt" inherits="MistUINineSlicePanelTemplate">
+                <Attributes>
+                    <Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame"/>
+                    <Attribute name="layoutType" value="UniqueCornersLayout"/>
+                </Attributes>
+            </Frame>
+            <Frame parentKey="Background" setAllPoints="true" inherits="MistUINineSlicePanelTemplate">
+                <Attributes>
+                    <Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame-background"/>
+                    <Attribute name="layoutTextureLayer" value="BACKGROUND"/>
+                    <Attribute name="layoutType" value="UniqueCornersLayout"/>
+                    <Attribute name="ignoreInLayout" type="boolean" value="true"/>
+                </Attributes>
+            </Frame>
+        </Frames>
+    </Frame>
+
+    <Script file="overridebar.lua"/>
+</Ui>

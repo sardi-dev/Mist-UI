@@ -1,0 +1,8 @@
+## Interface: 50400
+## Title: Sample
+## SavedVariables: SampleDB, SampleCharDB
+
+# a comment
+first.lua
+sub\load.xml
+gone.lua

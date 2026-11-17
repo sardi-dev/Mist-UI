@@ -1,0 +1,10 @@
+# Text files use LF on every platform, so a checkout on Windows matches the repository
+* text=auto eol=lf
+
+# Fonts and textures are binary: never convert line endings or show text diffs
+*.ttf binary
+*.blp binary
+*.tga binary
+
+# cmd.exe expects Windows line endings in batch files
+*.cmd text eol=crlf

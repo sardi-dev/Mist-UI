@@ -1,0 +1,21 @@
+{
+  "name": "mist-ui-tools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Development checks for the Mist-UI addon",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "check": "node tools/check.mjs",
+    "harness": "node tools/harness.mjs",
+    "art": "node tools/sync-art.mjs",
+    "release": "node tools/release.mjs"
+  },
+  "devDependencies": {
+    "luaparse": "0.3.1"
+  }
+}

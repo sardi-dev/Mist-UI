@@ -1,0 +1,261 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
+local addon = select(2, ...)
+local NP = addon.Nameplates
+
+-- Nameplates clickbox sizing and debug overlay. Plates are sized out of combat only: the client's
+-- own size is kept, plus the totem padding; a plate the client shows mid-combat waits for the end.
+
+NP.clickbox = NP.clickbox or {}
+
+local function ApplyClickboxForCombatPlate(plateData)
+    if plateData then
+        plateData._clickAreaPending = true
+    end
+    NP.module._layoutPending = true
+    return false
+end
+
+local function ApplyOverlayGeometry(plateData)
+    local overlay = plateData.clickboxOverlay
+    if not overlay then
+        return
+    end
+    local plate = plateData.plate
+    if not plate then
+        return
+    end
+
+    overlay:ClearAllPoints()
+    overlay:SetAllPoints(plate)
+end
+
+function NP.clickbox.OnCombatStart()
+    -- Existing geometry remains valid; changes are deferred until combat ends.
+end
+
+function NP.clickbox.OnPlateHidden(_plateData)
+end
+
+function NP.clickbox.CaptureBaseSize(plateData)
+    local plate = plateData and plateData.plate
+    if not plate then
+        return
+    end
+
+    local w, h = plate._mistUIClickboxNativeW, plate._mistUIClickboxNativeH
+    if not (w and h) then
+        w, h = NP.module._clickboxNativeW, NP.module._clickboxNativeH
+        if not (w and h) and not plate._mistUIClickboxSized and plate.GetSize then
+            w, h = plate:GetSize()
+        end
+        if not (w and w > 0 and h and h > 0) then
+            return
+        end
+        -- Stock recycles plate frames, so GetSize() on one we already sized reads back scaled.
+        plate._mistUIClickboxNativeW = w
+        plate._mistUIClickboxNativeH = h
+    end
+
+    plateData._clickboxBaseW = w
+    plateData._clickboxBaseH = h
+    if not NP.module._clickboxNativeW then
+        NP.module._clickboxNativeW = w
+    end
+    if not NP.module._clickboxNativeH then
+        NP.module._clickboxNativeH = h
+    end
+end
+
+-- Square clickbox for totem icon-only mode.
+function NP.clickbox.GetTotemIconClickboxSize()
+    local cfg = NP.config.GetCfg()
+    local C = NP.const
+    local base = math.max(C.TOTEM_ICON_W or 26, C.TOTEM_ICON_H or 26)
+    local pad = tonumber(cfg.totemClickPadding) or 0
+    local size = base + pad * 2
+    return size, size
+end
+
+function NP.clickbox.GetClickboxSize(plateData)
+    if NP.gather and NP.gather.IsTotemIconOnlyActive and NP.gather.IsTotemIconOnlyActive(plateData) then
+        return NP.clickbox.GetTotemIconClickboxSize()
+    end
+
+    local cfg = NP.config.GetCfg()
+    NP.clickbox.CaptureBaseSize(plateData)
+
+    local w = NP.module._clickboxNativeW or plateData._clickboxBaseW or 120
+    local h = NP.module._clickboxNativeH or plateData._clickboxBaseH or 20
+
+    local plateName = plateData and (plateData.plateName
+        or (NP.discovery and NP.discovery.GetPlateName(plateData)))
+    if plateName and NP.widgets and NP.widgets.IsTotemName(plateName) then
+        local pad = tonumber(cfg.totemClickPadding) or 0
+        if pad > 0 then
+            w = w + pad * 2
+            h = h + pad * 2
+        end
+    end
+
+    return w, h
+end
+
+function NP.clickbox.ShouldShowOverlay()
+    return NP.config.GetCfg().showClickbox == true
+end
+
+function NP.clickbox.EnsureOverlay(plateData)
+    if plateData.clickboxOverlay then
+        return plateData.clickboxOverlay
+    end
+    local plate = plateData.plate
+    if not plate or not plate.CreateTexture then
+        return nil
+    end
+    -- Host on a child frame, not a plate region: GetRegions() order on the native
+    -- plate is read positionally by external plate addons (and our own discovery.lua).
+    local host = CreateFrame("Frame", nil, plate)
+    host:SetAllPoints(plate)
+    local tex = host:CreateTexture(nil, "OVERLAY")
+    tex:SetTexture(0.8, 0.1, 0.1, 0.45)
+    tex:SetAllPoints(host)
+    if tex.SetDrawLayer then
+        tex:SetDrawLayer("OVERLAY", 7)
+    end
+    host:Hide()
+    plateData.clickboxOverlay = host
+    return host
+end
+
+function NP.clickbox.SyncOverlay(plateData)
+    local overlay = NP.clickbox.EnsureOverlay(plateData)
+    if not overlay then
+        return
+    end
+    if NP.clickbox.ShouldShowOverlay() then
+        overlay:Show()
+    else
+        overlay:Hide()
+    end
+end
+
+function NP.clickbox.RefreshAllOverlays()
+    for _, plateData in pairs(NP.module.plates) do
+        NP.clickbox.SyncOverlay(plateData)
+    end
+end
+
+function NP.clickbox.TickPreview()
+    local idleUntil = NP.module._clickboxSliderIdleUntil
+    if not idleUntil or GetTime() < idleUntil then
+        return
+    end
+    NP.module._clickboxSliderIdleUntil = nil
+    -- Only a Show the sliders switched on may be switched back off; a user-owned Show stays.
+    if NP.module._clickboxSliderAutoShow then
+        NP.module._clickboxSliderAutoShow = nil
+        NP.config.GetCfg().showClickbox = false
+        if NP.module._clickboxToggleRefresh then
+            NP.module._clickboxToggleRefresh(false)
+        end
+    end
+    NP.clickbox.RefreshAllOverlays()
+end
+
+function NP.clickbox.ApplyPlateClickbox(plateData)
+    local plate = plateData and plateData.plate
+    if not plate then
+        return true
+    end
+
+    NP.clickbox.EnsureOverlay(plateData)
+    ApplyOverlayGeometry(plateData)
+    NP.clickbox.SyncOverlay(plateData)
+
+    if InCombatLockdown() then
+        plateData._clickAreaPending = true
+        NP.module._layoutPending = true
+        ApplyClickboxForCombatPlate(plateData)
+        return false
+    end
+
+    NP.clickbox.CaptureBaseSize(plateData)
+
+    -- The only-target gate owns a shrunk plate's size until it lets the plate back.
+    if plate._mistUIOnlyTargetShrunk then
+        plateData._clickAreaPending = nil
+        return true
+    end
+
+    if plate.SetSize then
+        local w, h = NP.clickbox.GetClickboxSize(plateData)
+        plate:SetSize(w, h)
+        plate._mistUIClickboxSized = true
+    end
+
+    if plate.SetHitRectInsets then
+        plate:SetHitRectInsets(0, 0, 0, 0)
+    end
+
+    plateData._clickAreaPending = nil
+    return true
+end
+
+function NP.clickbox.FlushPending()
+    if InCombatLockdown() then
+        return
+    end
+    for _, plateData in pairs(NP.module.plates) do
+        if plateData._clickAreaPending then
+            NP.clickbox.ApplyPlateClickbox(plateData)
+        end
+    end
+end
+
+function NP.clickbox.OnPlateShown(plateData)
+    if not plateData then
+        return
+    end
+    NP.clickbox.EnsureOverlay(plateData)
+    ApplyOverlayGeometry(plateData)
+    if InCombatLockdown() then
+        plateData._clickAreaPending = true
+        ApplyClickboxForCombatPlate(plateData)
+    end
+    NP.clickbox.SyncOverlay(plateData)
+end
+
+function NP.clickbox.RefreshAll()
+    for _, plateData in pairs(NP.module.plates) do
+        NP.clickbox.ApplyPlateClickbox(plateData)
+    end
+end
+
+function NP.clickbox.RestorePlate(plateData)
+    local plate = plateData and plateData.plate
+    if not plate or InCombatLockdown() then
+        return false
+    end
+    plate._mistUIOnlyTargetShrunk = nil
+    local width = NP.module._clickboxNativeW or plate._mistUIClickboxNativeW or plateData._clickboxBaseW
+    local height = NP.module._clickboxNativeH or plate._mistUIClickboxNativeH or plateData._clickboxBaseH
+    if width and height and plate.SetSize then
+        plate:SetSize(width, height)
+        plate._mistUIClickboxSized = nil
+    end
+    if plate.SetHitRectInsets then
+        plate:SetHitRectInsets(0, 0, 0, 0)
+    end
+    return true
+end
+
+function NP.clickbox.ResetPlate(plateData)
+    if not plateData then
+        return
+    end
+    plateData._clickAreaPending = nil
+    if plateData.clickboxOverlay then
+        plateData.clickboxOverlay:Hide()
+    end
+end
