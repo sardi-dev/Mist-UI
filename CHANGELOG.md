@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **Error when hovering the bag window title** (2026-11-19)
+  - Summary: The three texts of the other characters picker (the title tooltip hint, the menu title and the empty menu message) were missing from the English locale file; they are added, and a test now checks every bag window text against it.
+  - Why: Hovering the bag window title, for example while selling at a vendor, raised a "Missing entry" Lua error. The repository check cannot see these texts because the bag window looks them up through a key table.
 - **License shown as MIT on GitHub** (2026-11-17)
   - Summary: The root LICENSE file is now the plain MIT text with both copyright lines; the note on the origin, bundled components and artwork stays in the README's Credits and License sections and in the addon folders' own LICENSE.txt files.
   - Why: The extra section stopped GitHub from recognising the license, so the repository showed no license.
