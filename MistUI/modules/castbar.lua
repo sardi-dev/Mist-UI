@@ -1888,7 +1888,10 @@ function CastbarModule:RefreshCastbar(unitType)
     if not cfg then
         return
     end
-    
+    if self.UpdateCombatLogListening then
+        self.UpdateCombatLogListening()
+    end
+
     if cfg.enabled then
         HideStockCastbar(unitType)
     else
@@ -3209,11 +3212,23 @@ local events = {
     'UNIT_TARGET',
     'PLAYER_TARGET_CHANGED',
     'PLAYER_FOCUS_CHANGED',
-    'COMBAT_LOG_EVENT_UNFILTERED'
 }
 
 for _, event in ipairs(events) do
     eventFrame:RegisterEvent(event)
+end
+
+-- Only interrupts are read from the combat log, which fires constantly in a raid, so it is
+-- listened to only while a shown cast bar names who interrupted it.
+function CastbarModule.UpdateCombatLogListening()
+    for _, unitType in ipairs(INTERRUPTER_UNITS) do
+        local cfg = GetConfig(unitType)
+        if cfg and cfg.enabled and cfg.showInterrupter ~= false then
+            eventFrame:RegisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
+            return
+        end
+    end
+    eventFrame:UnregisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
 end
 
 eventFrame:SetScript('OnEvent', OnEvent)
@@ -3232,6 +3247,7 @@ readyFrame:SetScript("OnEvent", function(self, event, addonName)
         end
         ApplyCastbarWidgetPosition("target")
         ApplyCastbarWidgetPosition("focus")
+        CastbarModule.UpdateCombatLogListening()
         self:UnregisterEvent("ADDON_LOADED")
     end
 end)

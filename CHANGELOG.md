@@ -6,6 +6,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Cast bars read the combat log only when needed** (2026-11-22)
+  - Summary: The cast bars listen to the combat log only while a cast bar that names the interrupter is on.
+  - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
+
 ### Fixed
 - **Combat visibility is right after a /reload in combat** (2026-11-22)
   - Summary: Parts set to show only in combat, or to hide in combat, now start in the right state when the interface loads during a fight.

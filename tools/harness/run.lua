@@ -1147,6 +1147,29 @@ Phase("combat fade after a reload in combat", function()
     bar:Hide()
 end)
 
+-- The cast bars read only interrupts from the combat log: with every cast bar off, they stop
+-- listening to it, and listen again when one is turned back on.
+Phase("cast bars and the combat log", function()
+    local addon = H.namespaces.MistUI
+    local handler = _G.MistUICastbarEventHandler
+    local castbar = addon.db.profile.castbar
+    local saved = { castbar.enabled, castbar.target.enabled, castbar.focus.enabled }
+    castbar.enabled, castbar.target.enabled, castbar.focus.enabled = false, false, false
+    addon.RefreshCastbar()
+    addon.RefreshTargetCastbar()
+    addon.RefreshFocusCastbar()
+    if handler:IsEventRegistered("COMBAT_LOG_EVENT_UNFILTERED") then
+        H.Report("cast bars and the combat log", "still listening to the combat log with every cast bar off")
+    end
+    castbar.enabled, castbar.target.enabled, castbar.focus.enabled = saved[1], saved[2], saved[3]
+    addon.RefreshCastbar()
+    addon.RefreshTargetCastbar()
+    addon.RefreshFocusCastbar()
+    if not handler:IsEventRegistered("COMBAT_LOG_EVENT_UNFILTERED") then
+        H.Report("cast bars and the combat log", "not listening to the combat log with the cast bars back on")
+    end
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI
