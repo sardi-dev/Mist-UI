@@ -111,6 +111,12 @@ local function AttachSavedLog()
     end
 end
 
+-- For errors the addon catches itself (a pcall around a refresh or a queued change): they never
+-- reach the error handler above, so without this the log would miss them.
+function ErrorLog.RecordCaught(message)
+    SafeRecord("caught", message, true)
+end
+
 function ErrorLog.GetEntries()
     return entries
 end

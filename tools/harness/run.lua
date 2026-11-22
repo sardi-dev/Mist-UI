@@ -1170,6 +1170,24 @@ Phase("cast bars and the combat log", function()
     end
 end)
 
+-- An error the addon catches itself (here a queued change that fails) lands in the saved log.
+Phase("caught errors in the error log", function()
+    local addon = H.namespaces.MistUI
+    local queue = addon.CombatQueue
+    H.inCombat = true
+    queue:Add("harness_failing", function() error("harness caught failure") end)
+    H.inCombat = false
+    H.Fire("PLAYER_REGEN_ENABLED")
+    local found
+    for _, entry in ipairs(addon.ErrorLog.GetEntries()) do
+        if entry.message:find("harness caught failure", 1, true) then found = entry end
+    end
+    if not found then
+        H.Report("caught errors in the error log", "a failed queued change is missing from the error log")
+    end
+    addon.ErrorLog.Clear()
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI

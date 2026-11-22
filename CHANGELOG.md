@@ -12,6 +12,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Errors the addon catches itself reach the error log** (2026-11-22)
+  - Summary: Failures the addon handles on its own (a module refresh, a change queued for after combat, a layout preset) are now kept in the saved error log as well as printed in chat.
+  - Why: They were only printed, so the error log attached to bug reports missed the most likely failures. Found in a code audit; a harness check now covers it.
 - **Combat visibility is right after a /reload in combat** (2026-11-22)
   - Summary: Parts set to show only in combat, or to hide in combat, now start in the right state when the interface loads during a fight.
   - Why: They assumed "not in combat" until the next fight started, so after a /reload mid-fight a show-in-combat bar stayed hidden and a hide-in-combat bar stayed visible. Found in a code audit; a harness check now covers it.

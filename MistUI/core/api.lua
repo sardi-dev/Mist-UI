@@ -1667,7 +1667,14 @@ function addon:Debug(...)
     end
 end
 
--- Print an error message
+-- Print an error message and keep it in the saved error log, which users attach to reports
 function addon:Error(...)
     print("|cFFFF0000[MistUI Error]|r", ...)
+    if addon.ErrorLog then
+        local parts = {}
+        for i = 1, select("#", ...) do
+            parts[i] = tostring((select(i, ...)))
+        end
+        addon.ErrorLog.RecordCaught(table.concat(parts, " "))
+    end
 end
