@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Name plates do less work in raids** (2026-11-22)
+  - Summary: Target and aura changes of party and raid members are handled with less work, and member aura changes are ignored when friendly name plate auras cannot be shown.
+  - Why: A raid sends these events many times a second and each one searched all plates. Found in a code audit.
 - **Boss clamp checks name plates less often** (2026-11-22)
   - Summary: With the boss clamp option on, the check for a boss name plate is reused for a short time instead of being repeated every frame.
   - Why: It did unit lookups for every enemy plate on every frame. Found in a code audit.

@@ -1598,6 +1598,66 @@ Phase("nameplate boss clamp cache", function()
     NP.engine.SyncConfigSnapshot()
 end)
 
+-- In a raid the engine hears every member's target and aura change: the group token test needs no
+-- string matching, and the aura lookup is skipped while no friendly plate can show auras.
+Phase("nameplate group events", function()
+    local NP = H.namespaces.MistUI.Nameplates
+    local cfg = NP.config.GetCfg()
+    local oldAuras, oldFriends = cfg.showFriendlyAuras, GetCVar("nameplateShowFriends")
+    units.party1 = Unit("Botfriend", "0x0000000000000002", 90)
+    H.state.group = true
+    H.Fire("GROUP_ROSTER_UPDATE")
+    H.Tick(0.2)
+
+    local lookups = 0
+    local groupUnitByGUID = NP.identity.GetGroupUnitByGUID
+    NP.identity.GetGroupUnitByGUID = function(...) lookups = lookups + 1; return groupUnitByGUID(...) end
+    local function AuraLookups(showFriendlyAuras, showFriends)
+        cfg.showFriendlyAuras = showFriendlyAuras
+        SetCVar("nameplateShowFriends", showFriends)
+        lookups = 0
+        H.Fire("UNIT_AURA", "party1")
+        return lookups
+    end
+    if AuraLookups(false, "1") ~= 0 then
+        H.Report("nameplate group events", "a member's aura change was looked up with friendly auras off")
+    end
+    if AuraLookups(true, "0") ~= 0 then
+        H.Report("nameplate group events", "a member's aura change was looked up with friendly plates off")
+    end
+    if AuraLookups(true, "1") == 0 then
+        H.Report("nameplate group events", "a member's aura change was not looked up with friendly auras on")
+    end
+    NP.identity.GetGroupUnitByGUID = groupUnitByGUID
+
+    local matches = 0
+    local match = string.match
+    string.match = function(subject, pattern, ...)
+        if pattern == "^party%d+$" or pattern == "^raid%d+$" then matches = matches + 1 end
+        return match(subject, pattern, ...)
+    end
+    for _, unit in ipairs({ "party1", "raid5", "boss1" }) do
+        NP.module._groupTargetMatchDirty = nil
+        H.Fire("UNIT_TARGET", unit)
+        local flagged = NP.module._groupTargetMatchDirty == true
+        if flagged ~= (unit ~= "boss1") then
+            H.Report("nameplate group events", unit .. " target change " .. (flagged and "asked" or "did not ask")
+                .. " for a group target refresh")
+        end
+    end
+    string.match = match
+    if matches > 0 then
+        H.Report("nameplate group events", "the group token test used " .. matches .. " string matches")
+    end
+
+    cfg.showFriendlyAuras = oldAuras
+    SetCVar("nameplateShowFriends", oldFriends)
+    units.party1 = nil
+    H.state.group = false
+    H.Fire("GROUP_ROSTER_UPDATE")
+    H.Tick(0.2)
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")

@@ -599,6 +599,22 @@ local function OnCombatLog(timestamp, ...)
     end
 end
 
+-- A raid fires target and aura events for every member many times a second; a token lookup is
+-- cheaper than a pattern match on each.
+local GROUP_UNIT_TOKENS = {}
+for i = 1, 4 do
+    GROUP_UNIT_TOKENS["party" .. i] = true
+end
+for i = 1, 40 do
+    GROUP_UNIT_TOKENS["raid" .. i] = true
+end
+
+-- A group member's aura change only matters to a plate the client shows for a friendly unit and
+-- that is allowed to draw auras.
+local function FriendlyPlateAurasPossible()
+    return NP.config.GetCfg().showFriendlyAuras == true and GetCVar("nameplateShowFriends") == "1"
+end
+
 local function EngineOnEvent(_, event, unit, ...)
     if not NP.module.applied or not NP.config.IsModuleEnabled() then return end
 
@@ -624,7 +640,7 @@ local function EngineOnEvent(_, event, unit, ...)
         return
     end
     if event == "UNIT_TARGET" and unit then
-        if unit:match("^party%d+$") or unit:match("^raid%d+$") then
+        if GROUP_UNIT_TOKENS[unit] then
             -- A raid fires this many times a second; the engine tick runs one pass before the queues drain.
             NP.identity.RequestGroupTargetRefresh()
             E.QueueMass(CB.OnUpdateCastbar)
@@ -763,6 +779,9 @@ local function EngineOnEvent(_, event, unit, ...)
                 E.QueuePlate(owner, CB.OnUpdateAuras)
             end
         elseif unit then
+            if GROUP_UNIT_TOKENS[unit] and not FriendlyPlateAurasPossible() then
+                return
+            end
             -- Any token mapping to a visible plate: a group member.
             local guid = UnitGUID(unit)
             local owner = guid and NP.state.GUIDToPlate[guid]
