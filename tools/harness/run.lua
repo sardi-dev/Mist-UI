@@ -35,6 +35,7 @@ setmetatable(_G, { __index = function(t, k)
 end })
 
 UIParent = H.NewObject("Frame", "UIParent")
+if manifest.stock.frames.UIParent and manifest.stock.frames.UIParent.protected then H.MarkProtected(UIParent) end
 UIParent.__width, UIParent.__height = 1365, 768
 WorldFrame = H.NewObject("Frame", "WorldFrame")
 SlashCmdList = SlashCmdList or {}
@@ -93,6 +94,12 @@ local function LoadFile(path)
     return loadstring(text, "@" .. path)
 end
 
+-- The chunk name of an addon file decides whether a call came from addon code (combat lockdown).
+local function RegisterAddonFile(addonName, path)
+    local shown = path:gsub("\\", "/"):match("/(" .. addonName .. "/.*)$")
+    if shown then H.addonSources["@" .. path] = shown end
+end
+
 local loaded = {}
 local function LoadAddon(addon)
     if loaded[addon.name] then return end
@@ -101,6 +108,7 @@ local function LoadAddon(addon)
     H.namespaces = H.namespaces or {}
     H.namespaces[addon.name] = ns
     for _, path in ipairs(addon.files) do
+        RegisterAddonFile(addon.name, path)
         local f, err = LoadFile(path)
         if not f then
             H.Report("syntax", err)
@@ -228,6 +236,94 @@ local function Unit(name, guid, level, classification)
         health = 900, healthMax = 1000, power = 50, powerMax = 100, powerType = 1, powerToken = "RAGE",
         classification = classification }
 end
+
+-- Group and vehicle updates that arrive in combat. The fake runs no stock code, so the stock
+-- updates the addon hooks are called here, as the stock event handlers would. Any change the
+-- addon makes to a protected frame meanwhile is reported as a combat lockdown violation.
+Phase("combat lockdown", function()
+    units.party1 = Unit("Botfriend", "0x0000000000000002", 90)
+    H.state.group = true
+    H.inCombat = true
+    H.Fire("PLAYER_REGEN_DISABLED")
+    H.Fire("GROUP_ROSTER_UPDATE")
+    H.Fire("PARTY_MEMBER_ENABLE", "party1")
+    H.Fire("UNIT_HEALTH", "party1")
+    for index = 1, 4 do
+        local frame = _G["PartyMemberFrame" .. index]
+        if frame and PartyMemberFrame_UpdateMember then PartyMemberFrame_UpdateMember(frame) end
+    end
+    H.Tick(1)
+    H.Fire("PARTY_MEMBER_DISABLE", "party1")
+
+    units.vehicle = Unit("Siege Tank", "0xF150000000000001", 90)
+    H.state.vehicle = true
+    H.Fire("UNIT_ENTERING_VEHICLE", "player", true, false, "Natural", "", 1, false)
+    H.Fire("UNIT_ENTERED_VEHICLE", "player", true, false, "Natural", "", 1, false)
+    H.Fire("UPDATE_VEHICLE_ACTIONBAR")
+    PlayerFrame_ToVehicleArt(PlayerFrame, "Natural")
+    H.Tick(1)
+    H.state.vehicle = false
+    units.vehicle = nil
+    H.Fire("UNIT_EXITING_VEHICLE", "player")
+    H.Fire("UNIT_EXITED_VEHICLE", "player")
+    PlayerFrame_ToPlayerArt(PlayerFrame)
+    H.Tick(1)
+
+    H.inCombat = false
+    H.Fire("PLAYER_REGEN_ENABLED")
+    units.party1 = nil
+    H.state.group = false
+    H.Fire("GROUP_ROSTER_UPDATE")
+    H.Tick(1)
+end)
+
+-- The lockdown check itself, so a silent phase above means "nothing found" and not "not working":
+-- code from an addon file must be reported for each kind of protected frame, and the same calls
+-- made from here, outside the addon, must not.
+Phase("combat lockdown self-check", function()
+    local probeChunk = "@probe/MistUI/probe.lua"
+    H.addonSources[probeChunk] = "MistUI/probe.lua"
+    local addonCode = loadstring([[
+        local secure, region, holder, plain = ...
+        secure:SetPoint("CENTER")
+        region:SetParent(plain)
+        holder:Hide()
+        plain:Hide()
+    ]], probeChunk)
+
+    local secure = CreateFrame("Button", nil, UIParent, "SecureActionButtonTemplate")
+    local region = secure:CreateTexture()
+    local holder = CreateFrame("Frame", nil, UIParent)
+    CreateFrame("Button", nil, holder, "SecureActionButtonTemplate")
+    local plain = CreateFrame("Frame", nil, UIParent)
+
+    local outer = H.errors
+    H.errors = {}
+    H.inCombat = true
+    -- Stock code: not flagged.
+    secure:SetPoint("CENTER")
+    region:SetParent(secure)
+    holder:Hide()
+    local fromStock = #H.errors
+    -- Addon code: the secure button, its texture and the frame that holds a secure button are
+    -- reported; the plain frame is not.
+    addonCode(secure, region, holder, plain)
+    local reported = #H.errors
+    H.inCombat = false
+    addonCode(secure, region, holder, plain)
+    local afterCombat = #H.errors - reported
+    H.errors = outer
+
+    if fromStock ~= 0 then
+        H.Report("combat lockdown self-check", "calls from outside the addon were reported as violations")
+    end
+    if reported ~= 3 then
+        H.Report("combat lockdown self-check", "expected 3 reported violations from addon code, got " .. reported)
+    end
+    if afterCombat ~= 0 then
+        H.Report("combat lockdown self-check", "calls outside combat were reported as violations")
+    end
+end)
 
 -- What the owner has never tested in the game: a group, a boss, a vehicle, a pet, stances.
 Phase("group", function()

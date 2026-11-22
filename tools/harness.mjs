@@ -2,7 +2,12 @@
 // Usage: node tools/harness.mjs [--saved <MistUI.lua>] [--verbose]
 // Loads both addons into a fake 5.4.8 game with Lua 5.1, plays a short session (login, bags,
 // bank, combat, slash commands) and prints every Lua error with its stack. It finds errors, not
-// looks or taint. Needs:
+// looks or taint. It also enforces the combat lockdown: in combat, a change that addon code makes
+// to a protected frame (XML protected="true" or a Secure* template, or a frame holding one) is
+// blocked and listed as an error with the method, the frame and the addon file and line. Only
+// Show, Hide, SetShown, SetPoint, ClearAllPoints, SetAllPoints, SetParent, SetWidth, SetHeight,
+// SetSize, SetScale and SetAttribute count, and on a texture or font string only SetParent.
+// Calls made by the harness itself or by stock code are not counted. Needs:
 //   - lua5.1.exe: the MISTUI_LUA51 variable, else ../tools-lua51/lua5.1.exe
 //   - the stock interface source: MISTUI_UI_SOURCE, else ../ui-source-5.4.8
 //   - optional, the client program for the names of its own functions: MISTUI_CLIENT_EXE
@@ -85,6 +90,8 @@ function readXml(text, frames, templates) {
       const inherits = attr('inherits');
       const parentKey = attr('parentKey');
       const hidden = attr('hidden') === 'true';
+      // Only protected frames are locked in combat; the Secure* templates inherit this flag.
+      const isProtected = attr('protected') === 'true';
       const root = enclosing ? enclosing.root : null;
       if (tag === 'Font' && !enclosing && rawName) {
         // Font objects are global objects even when the XML marks them virtual.
@@ -92,14 +99,14 @@ function readXml(text, frames, templates) {
       }
       if (!enclosing && attr('virtual') === 'true') {
         // A template root: its own name is the template name.
-        const tmpl = { type: tag, inherits, children: [], scripts: [] };
+        const tmpl = { type: tag, inherits, children: [], scripts: [], protected: isProtected };
         templates[rawName] = tmpl;
         entry = { tag, isFrame, root: { tmpl }, name: '$parent', path: '', scripts: tmpl.scripts };
       } else if (root && root.tmpl) {
         // A child inside a template.
         const name = rawName ? rawName.replace(/\$parent/g, enclosing.name ?? '$parent') : null;
         const path = `${enclosing.path}/${counter++}`;
-        const child = { type: tag, slot, name, inherits, parentKey, hidden, path, parentPath: enclosing.path, scripts: [] };
+        const child = { type: tag, slot, name, inherits, parentKey, hidden, path, parentPath: enclosing.path, scripts: [], protected: isProtected };
         root.tmpl.children.push(child);
         entry = { tag, isFrame, root, name: name ?? enclosing.name, path, scripts: child.scripts };
       } else {
@@ -110,11 +117,11 @@ function readXml(text, frames, templates) {
         const parentName = attr('parent') || (enclosing ? enclosing.name : null);
         const scripts = [];
         if (name) {
-          frames[name] = { type: tag, parent: parentName, hidden, inherits, keys: [], scripts };
+          frames[name] = { type: tag, parent: parentName, hidden, inherits, keys: [], scripts, protected: isProtected };
         }
         // Every child of a named frame is recorded on it, so its regions and parentKey fields exist.
         if (enclosing && enclosing.name && frames[enclosing.name]) {
-          frames[enclosing.name].keys.push({ key: parentKey, slot, type: tag, name, inherits, hidden, scripts });
+          frames[enclosing.name].keys.push({ key: parentKey, slot, type: tag, name, inherits, hidden, scripts, protected: isProtected });
         }
         entry = { tag, isFrame, root: { concrete: true }, name, path: '', scripts };
       }

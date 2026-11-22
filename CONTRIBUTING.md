@@ -56,7 +56,10 @@ party member, a boss, a vehicle, a pet, stances, the guild bank, every
 settings tab, three name plates and the slash commands. It prints every Lua
 error with its stack. Add `--saved <file>` to start from a saved settings
 file. It finds errors,
-not looks or taint: the game test still decides.
+not looks or taint: the game test still decides. It also blocks and reports
+changes that addon code makes to protected frames while the fake player is in
+combat, the way the client does; the report names the method, the frame and the
+addon file and line.
 
 It needs Lua 5.1 (`lua5.1.exe`, from the LuaBinaries project; set
 `MISTUI_LUA51` or place it in `../tools-lua51/`), the stock interface source

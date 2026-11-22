@@ -106,6 +106,16 @@ keys or a field of a table row. Texts built at run time are not followed.
 For the name checks it needs a copy of the stock 5.4.8 interface source, which
 is not part of this repository.
 
+### Combat lockdown in the harness
+
+`npm run harness` plays a group and a vehicle update in combat. In combat the
+fake client blocks addon code that moves, shows, hides, resizes or re-parents a
+protected frame (a frame from a `Secure*` template, one the stock XML marks
+`protected`, or one that holds such a frame) and lists each attempt as an error
+with the method, the frame and the addon file and line. Calls made by the
+harness or by stock code are not counted. A built-in self-check proves that a
+deliberate violation is caught and a stock call is not.
+
 ### Taint log
 
 With `/console taintLog 1` the client writes `Logs/taint.log`. Run

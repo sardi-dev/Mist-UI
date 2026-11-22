@@ -1,7 +1,8 @@
 -- A fake 5.4.8 game environment for loading the addon outside the client.
 -- It models frames, scripts, events and timers well enough to run addon code paths, and
 -- answers everything else with stand-ins so the run reaches the code under test. It cannot
--- show how anything looks, and it knows nothing about taint.
+-- show how anything looks. It knows nothing about taint, but it enforces the combat lockdown:
+-- addon code that changes a protected frame in combat is reported (see "Combat lockdown" below).
 
 local H = {}
 _G.__harness = H
@@ -335,7 +336,6 @@ function Widget:EnableMouse(v) self.__mouse = v end
 function Widget:IsMouseEnabled() return self.__mouse and 1 or nil end
 function Widget:SetAttribute(k, v) self.__attributes[k] = v end
 function Widget:GetAttribute(k) return self.__attributes[k] end
-function Widget:IsProtected() return nil end
 function Widget:Raise() end
 function Widget:Lower() end
 
@@ -477,6 +477,91 @@ H.Widget = Widget
 H.widgetMT = widgetMT
 
 -- ---------------------------------------------------------------------------
+-- Combat lockdown
+-- ---------------------------------------------------------------------------
+
+-- In combat the client blocks addon code from changing a protected frame. A frame is protected
+-- when its XML says protected="true" (the Secure* templates inherit that from
+-- SecureFrameTemplate) and, implicitly, when it holds a protected frame. A texture or font
+-- string takes the protection of its frame but only its SetParent is blocked. Code counts as
+-- addon code when a file of the addon is anywhere in the call stack, as taint spreads to
+-- everything such code calls. The client stops the action; so does the fake. Limits: protection
+-- gained by anchoring to a protected frame is not modelled, and a tail call
+-- ("return frame:Show()") hides the caller from the stack.
+H.addonSources = {} -- Lua chunk name of each addon file -> its path below the addon folder's parent
+
+local protectedFrames = {}
+local FRAME_METHODS = { "Show", "Hide", "SetShown", "SetPoint", "ClearAllPoints", "SetAllPoints", "SetParent",
+    "SetWidth", "SetHeight", "SetSize", "SetScale", "SetAttribute" }
+local REGION_METHODS = { SetParent = true }
+
+function H.MarkProtected(obj)
+    rawset(obj, "__protected", true)
+    protectedFrames[obj] = true
+    local o = obj.__parent
+    while type(o) == "table" and not rawget(o, "__implicitlyProtected") do
+        rawset(o, "__implicitlyProtected", true)
+        o = o.__parent
+    end
+end
+
+local function IsRegion(obj) return not obj.__isFrame and (obj.__type == "Texture" or obj.__type == "FontString") end
+
+-- Returns the frame whose protection decides, and whether the frame is protected explicitly.
+local function ProtectionOf(obj)
+    local frame = IsRegion(obj) and obj.__parent or obj
+    if type(frame) ~= "table" or H.IsStub(frame) then return nil end
+    local explicit = rawget(frame, "__protected")
+    return frame, explicit, explicit or rawget(frame, "__implicitlyProtected")
+end
+
+function Widget:IsProtected()
+    local _, explicit, protected = ProtectionOf(self)
+    return protected and 1 or nil, explicit and 1 or nil
+end
+
+local function Describe(obj)
+    if obj.__name then return obj.__name end
+    local o = obj.__parent
+    while type(o) == "table" and not o.__name do o = o.__parent end
+    return "<unnamed " .. tostring(obj.__type) .. (type(o) == "table" and (" of " .. o.__name) or "") .. ">"
+end
+
+-- The innermost addon file in the call stack as "MistUI/path.lua:line", or nil.
+local function AddonCaller()
+    local level = 2
+    while true do
+        local info = debug.getinfo(level, "Sl")
+        if not info then return nil end
+        local shown = H.addonSources[info.source]
+        if shown then return shown .. ":" .. info.currentline end
+        level = level + 1
+    end
+end
+
+for _, method in ipairs(FRAME_METHODS) do
+    local original = Widget[method]
+    Widget[method] = function(self, ...)
+        if H.inCombat then
+            local frame, _, protected = ProtectionOf(self)
+            if protected and (frame == self or REGION_METHODS[method]) then
+                local caller = AddonCaller()
+                if caller then
+                    local target = frame == self and ("frame " .. Describe(self))
+                        or ("region " .. Describe(self) .. " of frame " .. Describe(frame))
+                    H.Report("combat lockdown", ("combat lockdown: %s on protected %s, called from %s"):format(
+                        method, target, caller))
+                    return nil
+                end
+            end
+        end
+        local result = original(self, ...)
+        if method == "SetParent" and rawget(self, "__protected") then H.MarkProtected(self) end
+        return result
+    end
+end
+
+-- ---------------------------------------------------------------------------
 -- CreateFrame and stock frames
 -- ---------------------------------------------------------------------------
 
@@ -497,6 +582,7 @@ local function ApplyTemplates(obj, templates, depth)
         if tmpl then
             ApplyTemplates(obj, tmpl.inherits, depth + 1)
             SetDeclaredScripts(obj, tmpl.scripts)
+            if tmpl.protected then H.MarkProtected(obj) end
             for _, child in ipairs(tmpl.children) do
                 local parent = obj
                 if child.parentPath ~= "" then
@@ -511,6 +597,7 @@ local function ApplyTemplates(obj, templates, depth)
                     ApplyTemplates(c, child.inherits, depth + 1)
                 end
                 c.__shown = not child.hidden
+                if child.protected then H.MarkProtected(c) end
                 SetDeclaredScripts(c, child.scripts)
                 if child.parentKey then rawset(parent, child.parentKey, c) end
                 if child.slot then rawset(parent, child.slot, c) end
@@ -542,6 +629,7 @@ function H.StockFrame(name)
     f.__stock = true
     f.__shown = not info.hidden
     ApplyTemplates(f, info.inherits, 0)
+    if info.protected then H.MarkProtected(f) end
     SetDeclaredScripts(f, info.scripts)
     for _, k in ipairs(info.keys or {}) do
         local child = k.name and (rawget(_G, k.name) or H.StockFrame(k.name))
@@ -549,6 +637,7 @@ function H.StockFrame(name)
             child = NewObject(k.type, nil, f, k.inherits)
             child.__shown = not k.hidden
             ApplyTemplates(child, k.inherits, 0)
+            if k.protected then H.MarkProtected(child) end
             SetDeclaredScripts(child, k.scripts)
         end
         if k.key then rawset(f, k.key, child) end

@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Combat lockdown check in the harness** (2026-11-22)
+  - Summary: The offline harness now blocks and reports addon changes to protected frames made in combat, with the method, frame and addon file and line.
+  - Why: Blocked actions in combat were only found in game, from the taint log.
 - **Taint log summary command** (2026-11-22)
   - Summary: npm run taint reads the client's taint.log and lists the blocked actions and tainted globals caused by MistUI, grouped and counted, with the addon file and line.
   - Why: Taint reports from the game were long and mixed with other addons, so the addon's own causes were hard to find.
