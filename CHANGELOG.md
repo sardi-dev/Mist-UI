@@ -18,6 +18,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: Missing texts behind those lookups were only found in game, as errors.
 
 ### Changed
+- **A missing English text no longer raises an error** (2026-11-22)
+  - Summary: When a text has no entry in the English locale file, the interface now shows the text itself instead of an error message; `npm run check` keeps reporting missing entries before a release.
+  - Why: This release is English only and every text key is its English wording, so the error (like the bag title one reported in game) only interrupted play. The repository check now also follows texts behind helpers and key tables, so missing entries are still caught.
 - **Minimap no longer polls while it rotates** (2026-11-22)
   - Summary: With a rotating minimap the border helper no longer runs ten times a second. The backdrop follows zone changes and the other minimap values are set when their settings change.
   - Why: It re-checked values that almost never change, and a getter could write the settings. Found in a code audit.
