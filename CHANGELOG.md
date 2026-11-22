@@ -6,6 +6,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Locale check follows indirect texts** (2026-11-22)
+  - Summary: npm run check now compares texts looked up through helper functions, key tables and table fields with the English locale file.
+  - Why: Missing texts behind those lookups were only found in game, as errors.
+
 ### Changed
 - **Minimap no longer polls while it rotates** (2026-11-22)
   - Summary: With a rotating minimap the border helper no longer runs ten times a second. The backdrop follows zone changes and the other minimap values are set when their settings change.

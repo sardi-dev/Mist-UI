@@ -4,6 +4,8 @@
 // compiler's limits.
 
 import luaparse from 'luaparse';
+import { findIndirectLocaleUses } from './localeflow.mjs';
+import { ADDON_TABLE, localeTableName, stringValue } from './luaast.mjs';
 import { measureLuaLimits } from './lualimits.mjs';
 
 const EVENT_METHODS = new Set(['RegisterEvent', 'RegisterUnitEvent', 'UnregisterEvent', 'IsEventRegistered']);
@@ -19,10 +21,6 @@ const GLOBAL_TABLE = '_G';
 // hooksecurefunc("Name", handler) hooks a global function by its name. The name is a string, so
 // a misspelt or removed function would otherwise pass as text and fail in the client.
 const HOOK_FUNCTION = 'hooksecurefunc';
-// Every file of the addon shares one table under this local name.
-const ADDON_TABLE = 'addon';
-// Local names the addon gives its translation tables: L["text"] and LO["text"].
-const LOCALE_TABLES = new Set(['L', 'LO']);
 // The byte order mark as decoded text and as its three raw bytes (files are read as latin1).
 const BYTE_ORDER_MARKS = [String.fromCharCode(0xfeff), String.fromCharCode(0xef, 0xbb, 0xbf)];
 
@@ -31,16 +29,6 @@ export class LuaSyntaxError extends Error {
     super(message);
     this.line = line;
   }
-}
-
-function stringValue(node) {
-  if (!node || node.type !== 'StringLiteral') return null;
-  const raw = node.raw;
-  if (raw.startsWith('[')) {
-    const open = raw.indexOf('[', 1) + 1;
-    return raw.slice(open, raw.length - open);
-  }
-  return raw.slice(1, -1);
 }
 
 // Returns the value of a number written out in the source (`7`, `-8`), or null.
@@ -112,11 +100,9 @@ export function analyzeLua(source) {
   const isAddonField = (node) =>
     node.type === 'MemberExpression' && node.base.type === 'Identifier' && node.base.name === ADDON_TABLE;
 
-  // Returns the text key of `L["text"]`, or null for anything else.
+  // Returns the text key of `L["text"]` (or `addon.L["text"]`), or null for anything else.
   const localeKey = (node) =>
-    node.type === 'IndexExpression' && node.base.type === 'Identifier' && LOCALE_TABLES.has(node.base.name)
-      ? stringValue(node.index)
-      : null;
+    node.type === 'IndexExpression' && localeTableName(node.base) ? stringValue(node.index) : null;
 
   const writeTarget = (node) => {
     const viaGlobalTable = globalTableField(node);
@@ -183,7 +169,7 @@ export function analyzeLua(source) {
         return;
       case 'IndexExpression':
         if (localeKey(node) !== null) {
-          localeUses.push({ table: node.base.name, key: localeKey(node), line: lineOf(node) });
+          localeUses.push({ table: localeTableName(node.base), key: localeKey(node), line: lineOf(node) });
         }
         visit(node.base);
         visit(node.index);
@@ -228,6 +214,7 @@ export function analyzeLua(source) {
   }
 
   visit(ast.body);
+  localeUses.push(...findIndirectLocaleUses(ast));
   return {
     reads,
     writes,

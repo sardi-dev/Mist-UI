@@ -99,7 +99,10 @@ Lua file parses and stays inside the limits of the client's Lua compiler, that
 draw sublevels are in the range the client accepts, and that loaded code only
 uses and hooks functions, frames, events and templates that exist in the 5.4.8
 client.
-For the last part it needs a copy of the stock 5.4.8 interface source, which
+It also checks that every interface text looked up in a translation table has
+an English entry, including texts reached through a helper function, a table of
+keys or a field of a table row. Texts built at run time are not followed.
+For the name checks it needs a copy of the stock 5.4.8 interface source, which
 is not part of this repository.
 
 ### Environment variables
