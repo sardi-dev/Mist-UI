@@ -1723,7 +1723,8 @@ do
     function TokenBar:Refresh()
         local numTokens = 0
         for i = 1, MAX_WATCHED_TOKENS do
-            local name, count, extraCurrencyType, icon, itemID = GetBackpackCurrencyInfo(i)
+            -- 5.4.8 order (stock BackpackTokenFrame_Update); 3.3.5a had a currency type before the icon
+            local name, count, icon = GetBackpackCurrencyInfo(i)
             if name then
                 numTokens = numTokens + 1
                 local btn = self.tokenButtons[i]
@@ -1731,25 +1732,7 @@ do
                     btn = self:_CreateTokenButton(i)
                     self.tokenButtons[i] = btn
                 end
-                btn.extraCurrencyType = extraCurrencyType
-                btn.itemID = itemID
-
-                -- Icon selection (matches stock BackpackTokenFrame logic)
-                if extraCurrencyType == 1 then
-                    btn.icon:SetTexture("Interface\\PVPFrame\\PVP-ArenaPoints-Icon")
-                    btn.icon:SetTexCoord(0, 1, 0, 1)
-                elseif extraCurrencyType == 2 then
-                    local factionGroup = UnitFactionGroup("player")
-                    if factionGroup then
-                        btn.icon:SetTexture("Interface\\TargetingFrame\\UI-PVP-" .. factionGroup)
-                        btn.icon:SetTexCoord(0.03125, 0.59375, 0.03125, 0.59375)
-                    else
-                        btn.icon:SetTexCoord(0, 1, 0, 1)
-                    end
-                else
-                    btn.icon:SetTexture(icon)
-                    btn.icon:SetTexCoord(0, 1, 0, 1)
-                end
+                btn.icon:SetTexture(icon)
 
                 if count <= 99999 then
                     btn.count:SetText(count)
@@ -1791,6 +1774,7 @@ do
 
     function TokenBar:_CreateTokenButton(index)
         local btn = CreateFrame("Button", nil, self)
+        btn:SetID(index)
         btn:SetHeight(TOKENBAR_HEIGHT - 2)
 
         -- Count then icon, like retail's backpack token row
@@ -1809,17 +1793,7 @@ do
         -- Stock tooltip, same as the stock BackpackTokenTemplate
         btn:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-            if self.extraCurrencyType == 1 then
-                GameTooltip:SetText(ARENA_POINTS, 1, 1, 1)
-                GameTooltip:AddLine(TOOLTIP_ARENA_POINTS, nil, nil, nil, 1)
-                GameTooltip:Show()
-            elseif self.extraCurrencyType == 2 then
-                GameTooltip:SetText(HONOR_POINTS, 1, 1, 1)
-                GameTooltip:AddLine(TOOLTIP_HONOR_POINTS, nil, nil, nil, 1)
-                GameTooltip:Show()
-            elseif self.itemID then
-                GameTooltip:SetHyperlink("item:" .. self.itemID)
-            end
+            GameTooltip:SetBackpackToken(self:GetID())
         end)
         btn:SetScript("OnLeave", function()
             GameTooltip:Hide()

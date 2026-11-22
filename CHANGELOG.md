@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **Currency icons and tooltips in the bag window** (2026-11-22)
+  - Summary: The currency strip at the bottom of the bag window now reads the game's watched currency info in the 5.4.8 order (name, count, icon, currency id) and shows the stock backpack currency tooltip; the arena and honor point branches of the old client are gone.
+  - Why: It read the info in the 3.3.5a order, so a currency shown on the backpack (Valor, Justice) got its currency id as the icon (no icon) and never showed a tooltip. Found in a code audit; a harness check now covers it.
 - **Error when hovering the bag window title** (2026-11-19)
   - Summary: The three texts of the other characters picker (the title tooltip hint, the menu title and the empty menu message) were missing from the English locale file; they are added, and a test now checks every bag window text against it.
   - Why: Hovering the bag window title, for example while selling at a vendor, raised the Lua error `AceLocale-3.0-MistUI: MistUI: Missing entry for '|cff00ff00Right-Click|r to see another character's items'` (bagster.lua:355, from `OnTitleEnter`). It was reported again in game on 2026-11-21 on two characters running 0.1.0. The repository check cannot see these texts because the bag window looks them up through a key table.

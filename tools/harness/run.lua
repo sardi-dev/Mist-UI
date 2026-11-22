@@ -368,6 +368,40 @@ Phase("bank with bags", function()
     H.Tick(1)
 end)
 
+Phase("bag currency strip", function()
+    local mod = H.namespaces.MistUI.BagsterModule
+    if not (mod and mod.TokenBar) then
+        H.Report("bag currency strip", "the currency strip class is not there")
+        return
+    end
+    local VALOR_ICON = "Interface\\Icons\\pvecurrency-valor"
+    local savedInfo = GetBackpackCurrencyInfo
+    -- The 5.4.8 return order: name, count, icon, currency id
+    GetBackpackCurrencyInfo = function(index)
+        if index == 1 then return "Valor Points", 1200, VALOR_ICON, 396 end
+    end
+    local bar = mod.TokenBar:New(UIParent)
+    bar:Refresh()
+    local button = bar.tokenButtons[1]
+    if not button then
+        H.Report("bag currency strip", "no button for a watched currency")
+    else
+        if button.icon:GetTexture() ~= VALOR_ICON then
+            H.Report("bag currency strip", "currency icon is " .. tostring(button.icon:GetTexture()))
+        end
+        local shownIndex
+        local savedSetter = GameTooltip.SetBackpackToken
+        GameTooltip.SetBackpackToken = function(_, index) shownIndex = index end
+        H.FireScript(button, "OnEnter")
+        H.FireScript(button, "OnLeave")
+        GameTooltip.SetBackpackToken = savedSetter
+        if shownIndex ~= 1 then
+            H.Report("bag currency strip", "tooltip did not show watched currency 1, got " .. tostring(shownIndex))
+        end
+    end
+    GetBackpackCurrencyInfo = savedInfo
+end)
+
 Phase("guild bank", function()
     H.state.guildTabs = 2
     H.Fire("PLAYER_GUILD_UPDATE")
