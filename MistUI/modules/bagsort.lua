@@ -690,6 +690,7 @@ end
 
 -- Mirrors what the executor's drop does: a merge tops the target up and leaves the rest behind.
 local function QueueMove(from, to)
+    local movedItem = from.item
     if from.item and from.item == to.item and to.qty < to.cap then
         local total = from.qty + to.qty
         if total > to.cap then
@@ -703,7 +704,9 @@ local function QueueMove(from, to)
         from.qty, to.qty = to.qty, from.qty
         from.cap, to.cap = to.cap, from.cap
     end
-    plannedMoves[#plannedMoves + 1] = { fromBag = from.bag, fromSlot = from.slot, toBag = to.bag, toSlot = to.slot }
+    plannedMoves[#plannedMoves + 1] = {
+        fromBag = from.bag, fromSlot = from.slot, toBag = to.bag, toSlot = to.slot, item = movedItem,
+    }
 end
 
 local function UnlockedCells(bags)
@@ -752,7 +755,9 @@ local function TopUpStacks(donorBags, receiverBags, fullDonorsAllowed)
     end
 end
 
--- Not a strict weak order (unranked classes, equal names, empties); table.sort's pass order decides those.
+-- A total order over the cells: every tie is broken down to item id, quantity, bag and slot, because
+-- table.sort raises "invalid order function" when two cells each count as "not before" the other
+-- while still ordering differently against a third.
 local function ComesBefore(a, b)
     local itemA, itemB = a.item, b.item
     if not itemB then return itemA ~= nil end
@@ -771,11 +776,12 @@ local function ComesBefore(a, b)
     if fa.quality ~= fb.quality then return fa.quality > fb.quality end
     if fa.isGear then
         if fa.gearRank ~= fb.gearRank then return fa.gearRank < fb.gearRank end
-    elseif fa.subclass ~= fb.subclass then
+    elseif fa.subclassRank ~= fb.subclassRank then
         return fa.subclassRank < fb.subclassRank
     end
     if fa.level ~= fb.level then return fa.level > fb.level end
-    return fa.name < fb.name
+    if fa.name ~= fb.name then return fa.name < fb.name end
+    return itemA < itemB
 end
 
 local function ReverseStackEnabled()
@@ -904,6 +910,11 @@ local function IssueNextMoves()
             return
         end
         local itemID = ItemIDFromLink(sourceLink)
+        -- Looting or a manual move since the plan was made: the rest of the plan no longer fits the bags.
+        if itemID ~= move.item then
+            StopSorting(string.format("MistUI: " .. T("Sort stopped because the items in your bags changed (bag %d, slot %d). Sort again.", "Sort stopped because the items in your bags changed (bag %d, slot %d). Sort again."), fromBag, fromSlot))
+            return
+        end
         awaitedDrop = { bag = toBag, slot = toSlot, item = itemID }
         local stackLimit = itemID and select(8, GetItemInfo(itemID)) or 1
 

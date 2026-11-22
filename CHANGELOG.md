@@ -27,6 +27,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Bag sort order is fully defined and stops if the bags change** (2026-11-22)
+  - Summary: Sorting no longer depends on the sort pass for unranked item
+  - Why: The old comparison could raise a sort error or give an uneven order,
 - **Bank quality borders repaint once per burst of changes** (2026-11-22)
   - Summary: The bank slot borders are now updated once after a burst of slot
   - Why: Bank sorts and large moves caused dozens of needless repaints and

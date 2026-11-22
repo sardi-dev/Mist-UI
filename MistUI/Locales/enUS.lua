@@ -446,6 +446,7 @@ L["Sort stopped."] = true
 L["(%s ago)"] = true
 L["Click again while sorting to stop."] = true
 L["Sort stopped because a move did not finish (bag %d, slot %d). Try again, or lock that slot."] = true
+L["Sort stopped because the items in your bags changed (bag %d, slot %d). Sort again."] = true
 L["Bags already sorted!"] = true
 L["You must be at the bank."] = true
 L["Bank already sorted!"] = true

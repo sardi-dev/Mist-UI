@@ -405,7 +405,8 @@ end)
 -- A small fake bag set for the bag audit checks below; the original functions come back afterwards.
 local BAG_FAKE_NAMES = {
     "GetContainerNumSlots", "GetContainerItemID", "GetContainerItemLink", "GetContainerItemInfo",
-    "GetContainerItemQuestInfo", "GetItemInfo", "UseContainerItem",
+    "GetContainerItemQuestInfo", "GetItemInfo", "UseContainerItem", "CursorHasItem", "GetCursorInfo", "ClearCursor",
+    "PickupContainerItem",
 }
 local function InstallBagFake(sizes, grid, facts)
     local saved = {}
@@ -433,6 +434,35 @@ local function InstallBagFake(sizes, grid, facts)
         if not f or (f.cachedAt and H.now < f.cachedAt) then return nil end
         return f.name or ("Item " .. id), nil, f.quality, f.level or 10, 1, f.class or "Miscellaneous",
             f.subclass or "Junk", f.stack or 1, f.equip or "", "Interface\Icons\INV_Misc_QuestionMark", f.price
+    end
+    -- As in the client: a picked-up item stays in its slot until dropped; a drop on another item swaps
+    -- the two, or merges equal stacks.
+    local cursor
+    _G.CursorHasItem = function() return cursor ~= nil end
+    _G.GetCursorInfo = function()
+        local item = cursor and Entry(cursor.bag, cursor.slot)
+        if not item then return nil end
+        return "item", item.id, _G.GetContainerItemLink(cursor.bag, cursor.slot)
+    end
+    _G.ClearCursor = function() cursor = nil end
+    _G.PickupContainerItem = function(bag, slot)
+        local target = Entry(bag, slot)
+        if not cursor then
+            if target then cursor = { bag = bag, slot = slot } end
+            return
+        end
+        local source = Entry(cursor.bag, cursor.slot)
+        if cursor.bag ~= bag or cursor.slot ~= slot then
+            local stackLimit = target and facts[target.id].stack or 1
+            if target and source.id == target.id and target.count < stackLimit then
+                local moved = math.min(stackLimit - target.count, source.count)
+                target.count, source.count = target.count + moved, source.count - moved
+                if source.count == 0 then grid[cursor.bag][cursor.slot] = nil end
+            else
+                grid[bag][slot], grid[cursor.bag][cursor.slot] = source, target
+            end
+        end
+        cursor = nil
     end
     return function()
         for _, name in ipairs(BAG_FAKE_NAMES) do _G[name] = saved[name] end
@@ -697,6 +727,103 @@ Phase("bank quality borders", function()
     _G.GetContainerItemLink = savedLink
     BankFrame:Hide()
     moduleConfig.enabled = wasEnabled
+end)
+
+Phase("bag sort order and changed slots", function()
+    local addon = H.namespaces.MistUI
+    local function Check(condition, message)
+        if not condition then H.Report("bag sort order", message) end
+    end
+    DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME or { AddMessage = function(_, text) print("chat: " .. tostring(text)) end }
+    local chat = {}
+    local addMessage = DEFAULT_CHAT_FRAME.AddMessage
+    DEFAULT_CHAT_FRAME.AddMessage = function(self, text, ...)
+        chat[#chat + 1] = tostring(text)
+        return addMessage(self, text, ...)
+    end
+    local function Said(fragment)
+        for _, line in ipairs(chat) do
+            if line:find(fragment, 1, true) then return true end
+        end
+        return false
+    end
+    local config = addon:GetModuleConfig("bagsort")
+    local savedLocks = config.lockedSlots
+    config.lockedSlots = {}
+
+    -- Items of one class whose subclasses the client does not rank: only level, name and id can order them
+    local FIRST_ID, COUNT = 801, 24
+    local facts = {}
+    for i = 1, COUNT do
+        facts[FIRST_ID + i - 1] = {
+            class = "Consumable", subclass = "Kind " .. (i % 3), quality = 1, level = (i % 5) * 5,
+            name = "Tonic " .. (i % 4), stack = 1,
+        }
+    end
+    local SLOTS_PER_BAG = { [0] = 16, [1] = 18 }
+    local grid = { [0] = {}, [1] = {} }
+    for i = 1, COUNT do
+        local position = (i * 7) % 34
+        local bag = position < 16 and 0 or 1
+        grid[bag][bag == 0 and position + 1 or position - 15] = { id = FIRST_ID + i - 1, count = 1 }
+    end
+    local restore = InstallBagFake({ [0] = 16, [1] = 18 }, grid, facts)
+
+    local expected = {}
+    for id = FIRST_ID, FIRST_ID + COUNT - 1 do expected[#expected + 1] = id end
+    table.sort(expected, function(a, b)
+        local fa, fb = facts[a], facts[b]
+        if fa.level ~= fb.level then return fa.level > fb.level end
+        if fa.name ~= fb.name then return fa.name < fb.name end
+        return a < b
+    end)
+    local function Order()
+        local out = {}
+        for bag = 0, 1 do
+            for slot = 1, SLOTS_PER_BAG[bag] do
+                local entry = grid[bag][slot]
+                if entry then out[#out + 1] = entry.id end
+            end
+        end
+        return table.concat(out, " ")
+    end
+    local function Packed()
+        local seenEmpty = false
+        for bag = 0, 1 do
+            for slot = 1, SLOTS_PER_BAG[bag] do
+                if grid[bag][slot] then
+                    if seenEmpty then return false end
+                else
+                    seenEmpty = true
+                end
+            end
+        end
+        return true
+    end
+
+    addon.SortPlayerBags()
+    H.Tick(30)
+    Check(Order() == table.concat(expected, " "), "unranked subclasses were not ordered by level, name and id: " .. Order())
+    Check(Packed(), "empty slots are left between sorted items")
+    Check(not Said("Sort stopped"), "a sort of unchanged bags was stopped")
+
+    -- An item looted into a slot the plan still means to move stops the sort instead of moving the wrong item
+    local LOOTED = 899
+    facts[LOOTED] = { class = "Consumable", subclass = "Other", quality = 1, level = 99, name = "Looted", stack = 1 }
+    for bag = 0, 1 do grid[bag] = {} end
+    grid[0][1] = { id = FIRST_ID + 4, count = 1 }
+    grid[0][2] = { id = FIRST_ID + 3, count = 1 }
+    grid[0][3] = { id = FIRST_ID + 2, count = 1 }
+    chat = {}
+    addon.SortPlayerBags()
+    grid[0][3] = { id = LOOTED, count = 1 }
+    H.Tick(5)
+    Check(Said("changed"), "a sort did not notice the item in its source slot changed")
+    Check(grid[0][3].id == LOOTED, "the item that appeared in a source slot was moved by the old plan")
+
+    restore()
+    DEFAULT_CHAT_FRAME.AddMessage = addMessage
+    config.lockedSlots = savedLocks
 end)
 
 Phase("guild bank", function()
