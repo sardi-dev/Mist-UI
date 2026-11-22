@@ -27,6 +27,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Sort lock icons hide when Bag Sort is off** (2026-11-22)
+  - Summary: The padlock icons on locked bag slots are now only shown while
+  - Why: With the module off, bag slots still showed padlocks that could not
 - **Bag sort order is fully defined and stops if the bags change** (2026-11-22)
   - Summary: Sorting no longer depends on the sort pass for unranked item
   - Why: The old comparison could raise a sort error or give an uneven order,

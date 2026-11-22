@@ -266,7 +266,8 @@ local function UpdateButtonLockMarker(button)
     if not marker then return end
 
     local bag, slot = GetBagSlotFromButton(button)
-    if bag and slot and IsSlotLocked(bag, slot) then
+    -- The lock list outlives the module, but a disabled module must not draw its padlocks.
+    if BagSortModule.applied and bag and slot and IsSlotLocked(bag, slot) then
         marker:SetVertexColor(GetLockMarkerColor())
         marker:Show()
     else
@@ -1835,6 +1836,8 @@ ApplyBagSortSystem = function()
     end)
 
     BagSortModule.applied = true
+    -- The hooks above ran before the module counted as applied, so paint the padlocks now.
+    RefreshAllLockMarkers()
 end
 
 local function RestoreBagSortSystem()

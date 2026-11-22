@@ -826,6 +826,42 @@ Phase("bag sort order and changed slots", function()
     config.lockedSlots = savedLocks
 end)
 
+Phase("bag sort lock icons", function()
+    local addon = H.namespaces.MistUI
+    local mod = addon.BagsterModule
+    local function Check(condition, message)
+        if not condition then H.Report("bag sort lock icons", message) end
+    end
+    local config = addon:GetModuleConfig("bagsort")
+    local savedLocks = config.lockedSlots
+    config.lockedSlots = { ["0:5"] = true }
+
+    local slot = mod.ItemSlot:New()
+    slot.GetBag = function() return 0 end
+    slot:SetID(5)
+    local function MarkerShown()
+        local marker = slot._mistUISortLockMarker
+        return marker ~= nil and marker:IsShown()
+    end
+    Check(slot._mistUISortLockMarker ~= nil, "a new bag window slot has no lock icon")
+
+    slot:Hide()
+    slot:Show()
+    Check(MarkerShown(), "a locked slot shows no lock icon while the module is on")
+
+    addon.RestoreBagSortSystem()
+    Check(not MarkerShown(), "the lock icon stays after the module is turned off")
+    slot:Hide()
+    slot:Show()
+    Check(not MarkerShown(), "a slot shown after the module was turned off draws its lock icon")
+
+    addon.ApplyBagSortSystem()
+    Check(MarkerShown(), "the lock icon did not come back when the module was turned on")
+
+    slot:Free()
+    config.lockedSlots = savedLocks
+end)
+
 Phase("guild bank", function()
     H.state.guildTabs = 2
     H.Fire("PLAYER_GUILD_UPDATE")
