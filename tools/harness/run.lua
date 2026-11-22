@@ -1217,6 +1217,48 @@ Phase("module commands stage like the modules tab", function()
     cfg.enabled = true
 end)
 
+-- A layout string is applied as a whole or refused: own exports import, a string with an unknown
+-- setting or a wrong value changes nothing.
+Phase("layout string validation", function()
+    local addon = H.namespaces.MistUI
+    local presets = addon.PositionPresets
+    local Report = function(message) H.Report("layout string validation", message) end
+    if not presets:Save("Harness Export") then return Report("could not save a preset") end
+    local exported = presets:ExportToString("Harness Export")
+    if not (exported and presets:ImportFromString(exported)) then Report("an exported layout did not import again") end
+    presets:GetStore()["Harness Export"] = nil
+
+    local serializer = {}
+    LibStub("AceSerializer-3.0"):Embed(serializer)
+    local deflate = LibStub("LibDeflate")
+    local function Encode(snapshot)
+        return "!MISTUIPP1!" .. deflate:EncodeForPrint(deflate:CompressDeflate(serializer:Serialize(snapshot)))
+    end
+    local widgets = addon.db.profile.widgets
+    local known
+    for key, widget in pairs(widgets) do
+        if type(widget) == "table" and key ~= "positionPresetPanel" then known = key break end
+    end
+    local knownX = widgets[known].posX
+    local bad = {
+        { version = 1, widgets = { harnessBogus = { posX = 1 } } },
+        { version = 1, widgets = { [known] = { posX = "12" } } },
+        { version = 1, castbar = { target = "left" } },
+        { version = 1, castbar = { enabled = true } },
+        { version = 1, questtracker = { x = 5, colour = "red" } },
+    }
+    for index, snapshot in ipairs(bad) do
+        local data, errType = presets:ImportFromString(Encode(snapshot))
+        if data or errType ~= "invalid" then Report("bad layout " .. index .. " was not refused as invalid") end
+        local ok, restored = pcall(presets.Restore, presets, snapshot)
+        if not ok then Report("restoring bad layout " .. index .. " raised: " .. tostring(restored)) end
+        if ok and restored then Report("bad layout " .. index .. " was restored") end
+    end
+    if widgets.harnessBogus ~= nil then Report("an unknown widget reached the profile") end
+    if widgets[known].posX ~= knownX then Report("a text position reached the profile") end
+    widgets.harnessBogus = nil
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI

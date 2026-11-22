@@ -62,6 +62,19 @@ local LOOTROLL_POSITION_KEYS = {
     y = true,
 }
 
+-- What each saved position field may hold. A layout string can come from anyone, so anything
+-- else is refused before it reaches the profile.
+local NUMBER_FIELDS = { posX = true, posY = true, x = true, y = true, x_position = true, y_position = true }
+local BOOLEAN_FIELDS = { override = true, custom_position = true }
+local STRING_FIELDS = { anchor = true, anchorParent = true, anchorFrame = true }
+local MAX_STRING_LENGTH = 100
+
+local SNAPSHOT_SUBSECTIONS = {
+    castbar = { player = CASTBAR_PLAYER_POSITION_KEYS, target = CASTBAR_POSITION_KEYS, focus = CASTBAR_POSITION_KEYS },
+    unitframe = { tot = UNITFRAME_POSITION_KEYS, fot = UNITFRAME_POSITION_KEYS, party = UNITFRAME_POSITION_KEYS },
+}
+local SNAPSHOT_FLAT_SECTIONS = { questtracker = QUESTTRACKER_POSITION_KEYS, lootroll = LOOTROLL_POSITION_KEYS }
+
 local Serializer = {}
 LibStub("AceSerializer-3.0"):Embed(Serializer)
 local LibDeflate = LibStub("LibDeflate")
@@ -103,6 +116,89 @@ local function MergeFields(target, source, fieldMap)
     for key, value in pairs(source) do
         if not fieldMap or fieldMap[key] then
             target[key] = value
+        end
+    end
+end
+
+local function IsValidFieldValue(key, value)
+    if NUMBER_FIELDS[key] then
+        return type(value) == "number" and value == value and value > -math.huge and value < math.huge
+    elseif BOOLEAN_FIELDS[key] then
+        return type(value) == "boolean"
+    elseif STRING_FIELDS[key] then
+        return type(value) == "string" and #value <= MAX_STRING_LENGTH
+    end
+    return false
+end
+
+-- The path of the first unknown or badly typed field of one section, or nil when all are fine.
+local function FindInvalidField(section, fieldMap, path)
+    if type(section) ~= "table" then
+        return path
+    end
+    for key, value in pairs(section) do
+        if not fieldMap[key] or not IsValidFieldValue(key, value) then
+            return path .. "." .. tostring(key)
+        end
+    end
+end
+
+local function IsKnownWidget(key)
+    if type(key) ~= "string" or key == PANEL_WIDGET_KEY then
+        return false
+    end
+    local defaults = addon.defaults and addon.defaults.profile and addon.defaults.profile.widgets
+    local profile = addon.db and addon.db.profile and addon.db.profile.widgets
+    return (defaults and defaults[key] ~= nil) or (profile and profile[key] ~= nil) or false
+end
+
+-- The first setting of a snapshot this version does not know or cannot use, or nil when it is
+-- safe to restore as a whole (a layout string is applied completely or not at all).
+local function FindInvalidSetting(snapshot)
+    if type(snapshot) ~= "table" or snapshot.version ~= SNAPSHOT_VERSION then
+        return "version"
+    end
+    for key, value in pairs(snapshot) do
+        local bad
+        if key == "version" then
+            bad = nil
+        elseif SNAPSHOT_FLAT_SECTIONS[key] then
+            bad = FindInvalidField(value, SNAPSHOT_FLAT_SECTIONS[key], key)
+        elseif SNAPSHOT_SUBSECTIONS[key] then
+            if type(value) ~= "table" then
+                return key
+            end
+            for child, fields in pairs(value) do
+                local fieldMap = SNAPSHOT_SUBSECTIONS[key][child]
+                if not fieldMap then
+                    return key .. "." .. tostring(child)
+                end
+                bad = FindInvalidField(fields, fieldMap, key .. "." .. child)
+                if bad then
+                    return bad
+                end
+            end
+        elseif key == "widgets" then
+            if type(value) ~= "table" then
+                return key
+            end
+            for widgetKey, fields in pairs(value) do
+                if not IsKnownWidget(widgetKey) then
+                    return "widgets." .. tostring(widgetKey)
+                end
+                bad = FindInvalidField(fields, WIDGET_POSITION_KEYS, "widgets." .. widgetKey)
+                if bad then
+                    return bad
+                end
+            end
+        elseif key == "additional" then
+            -- Written empty by every snapshot so far; kept accepted so older strings still import.
+            bad = (type(value) ~= "table" or next(value) ~= nil) and key or nil
+        else
+            bad = tostring(key)
+        end
+        if bad then
+            return bad
         end
     end
 end
@@ -326,8 +422,9 @@ function PositionPresets:Snapshot()
 end
 
 function PositionPresets:Restore(snapshot)
-    if type(snapshot) ~= "table" then
-        return false
+    local invalid = FindInvalidSetting(snapshot)
+    if invalid then
+        return false, invalid
     end
 
     local profile = addon.db and addon.db.profile
@@ -763,6 +860,11 @@ function PositionPresets:ImportFromString(str)
         return nil, "deserialize"
     end
 
+    local invalid = FindInvalidSetting(data)
+    if invalid then
+        return nil, "invalid", invalid
+    end
+
     return data
 end
 
@@ -1004,11 +1106,13 @@ local function ShowImportFrame()
             return
         end
 
-        local data, errType = PositionPresets:ImportFromString(text)
+        local data, errType, detail = PositionPresets:ImportFromString(text)
         if not data then
             local msg = L["Invalid position preset string."]
             if errType == "header" then
                 msg = L["Not a valid MistUI position preset string."]
+            elseif errType == "invalid" then
+                msg = string.format(L["Layout not imported: it has a setting this version does not know or cannot use (%s)."], detail)
             end
             addon:Print("|cFFFF4444[MistUI]|r " .. msg)
             return

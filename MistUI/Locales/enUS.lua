@@ -112,6 +112,7 @@ L["Export Position Preset"] = true
 L["Import Position Preset"] = true
 L["Invalid position preset string."] = true
 L["Not a valid MistUI position preset string."] = true
+L["Layout not imported: it has a setting this version does not know or cannot use (%s)."] = true
 L["Failed to export position preset."] = true
 L["Delete Preset"] = true
 L["Export Preset"] = true

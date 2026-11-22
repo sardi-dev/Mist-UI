@@ -15,6 +15,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Layout strings are checked before they are imported** (2026-11-22)
+  - Summary: An imported layout string (and a saved layout preset) is applied only if every setting in it is a known position field with the right kind of value; otherwise nothing changes and the message names the first setting that is wrong.
+  - Why: A layout string can come from anyone. An edited or broken one could write unknown entries or wrong values into the settings, half-apply, or raise an error. Found in a code audit; a harness check now covers it.
 - **Errors the addon catches itself reach the error log** (2026-11-22)
   - Summary: Failures the addon handles on its own (a module refresh, a change queued for after combat, a layout preset) are now kept in the saved error log as well as printed in chat.
   - Why: They were only printed, so the error log attached to bug reports missed the most likely failures. Found in a code audit; a harness check now covers it.
