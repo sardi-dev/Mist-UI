@@ -72,11 +72,13 @@ after updating Mist-UI if the release notes say the artwork changed.
 | `/mist` | Open the settings (also the **MistUI** button in the Escape menu) |
 | `/mist edit` | Toggle edit mode |
 | `/mist errors` | Show the errors Mist-UI recorded (`on`, `off`, `clear`) |
+| `/mist report` | Open a box with the versions, the modules that run and the latest errors, ready to copy into a bug report |
 | `/mist help` | List every command |
 
 Mist-UI keeps its last 50 errors in its saved settings file
 (`WTF/Account/<account>/SavedVariables/MistUI.lua`, under `errorLog`), written
-on logout or `/reload`. Attach that part of the file when you report a problem.
+on logout or `/reload`. The easiest way to share them is `/mist report`: copy
+the text it shows into your report.
 
 ## Reporting problems and contributing
 

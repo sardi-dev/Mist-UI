@@ -259,6 +259,7 @@ local function ShowHelp()
     print("  " .. L["/mistui farm - Toggle farm mode (big minimap, chrome hidden)"])
     print("  " .. L["/mistui debug on|off|status - Toggle diagnostic logging"])
     print("  " .. L["/mistui errors - Show recorded MistUI errors (on|off|clear)"])
+    print("  " .. L["/mistui report - Show a report to copy into a bug report"])
     print("  " .. L["/mistui mouse - Show what is under the mouse pointer"])
     print("  " .. L["/mistui plates - Save the layout of the name plates on screen"])
     print("  " .. L["/mistui nameplates on|off - Turn the nameplate module on or off"])
@@ -300,6 +301,8 @@ local function SlashCommandHandler(input)
         SetDebugMode(arg)
     elseif cmd == "errors" or cmd == "error" then
         ShowErrors(arg)
+    elseif cmd == "report" then
+        addon.Report.Show()
     elseif cmd == "mouse" then
         ShowMouseFocus()
     elseif cmd == "cd" or cmd == "cooldowns" then

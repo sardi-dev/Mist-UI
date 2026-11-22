@@ -1833,6 +1833,29 @@ Phase("missing texts stay quiet", function()
     end
 end)
 
+-- /mist report shows versions, modules and the latest recorded error, ready to copy.
+Phase("bug report box", function()
+    local addon = H.namespaces.MistUI
+    addon:Error("harness report error")
+    Slash("/mist report")
+    local dialog, box = _G.MistUI_ReportDialog, _G.MistUI_ReportBox
+    if not (dialog and box and dialog:IsShown()) then
+        H.Report("bug report box", "/mist report showed no box")
+        return
+    end
+    local text = box:GetText() or ""
+    for _, wanted in ipairs({ "Mist-UI ", "Client ", "Modules on: ", "Modules off: ", "harness report error" }) do
+        if not text:find(wanted, 1, true) then
+            H.Report("bug report box", "the report has no '" .. wanted .. "'")
+        end
+    end
+    if text:find(UnitName("player"), 1, true) then
+        H.Report("bug report box", "the report names the character")
+    end
+    dialog:Hide()
+    addon.ErrorLog.Clear()
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI

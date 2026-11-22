@@ -15,6 +15,7 @@
     <Script file="editor_snap.lua"/>
     <Script file="position_presets.lua"/>
     <Script file="commands.lua"/>
+    <Script file="report.lua"/>
     <Script file="gamemenu_button.lua"/>
     <Script file="platedump.lua"/>
     <Script file="perf.lua"/>

@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **/mist report for bug reports** (2026-11-22)
+  - Summary: `/mist report` opens a box with the Mist-UI and client versions, the modules that are on and off, and the latest recorded errors with where they came from, selected and ready to copy. Character and realm names are left out.
+  - Why: Sharing the error log meant finding and opening the saved settings file; now a report is one command and a copy.
 - **Combat lockdown check in the harness** (2026-11-22)
   - Summary: The offline harness now blocks and reports addon changes to protected frames made in combat, with the method, frame and addon file and line.
   - Why: Blocked actions in combat were only found in game, from the taint log.
