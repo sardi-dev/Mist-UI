@@ -903,6 +903,12 @@ do
         return self.player or mod.playerName
     end
 
+    -- Category tabs and the rarity filter decide from GetItemInfo; the plain bag filter does not.
+    function ItemFrame:FilterNeedsItemInfo()
+        local f = self.filter
+        return (f.quality and f.quality > 0) or f.rule ~= nil or f.subRule ~= nil
+    end
+
     function ItemFrame:HasItem(bag, slot, link)
         local hasBag = false
         for _, bagID in pairs(self.bags) do
@@ -923,7 +929,13 @@ do
 
             local name, quality, level, ilvl, itemType, subType, stackCount, equipLoc
             if link then
-                name, link, quality, level, ilvl, itemType, subType, stackCount, equipLoc = GetItemInfo(link)
+                local slotLink = link
+                name, link, quality, level, ilvl, itemType, subType, stackCount, equipLoc = GetItemInfo(slotLink)
+                -- Not cached yet: this slot is filtered out for now and the view is redone once details arrive.
+                -- A caged pet never gets item details, so it must not keep the view waiting.
+                if not name and self:FilterNeedsItemInfo() and not BattlePet.IsLink(slotLink) then
+                    self.itemInfoMissing = true
+                end
             end
 
             if f.quality and f.quality > 0 and not (quality and bit.band(f.quality, mod.QualityFlags[quality] or 0) > 0) then
@@ -951,28 +963,33 @@ do
         end
     end
 
-    -- Details the server sends late (type, level, binding) can change a search answer, so an
-    -- active search runs again once a burst of them has arrived.
-    local SEARCH_REFRESH_DELAY = 0.2
-    local searchRefreshPending = false
+    -- Details the server sends late (type, level, binding) can change a search answer or the items
+    -- a filtered tab holds, so both run again once a burst of them has arrived.
+    local ITEM_INFO_REFRESH_DELAY = 0.2
+    local itemInfoRefreshPending = false
 
-    local function RefreshActiveSearches()
-        searchRefreshPending = false
+    local function RefreshActiveViews()
+        itemInfoRefreshPending = false
         for _, frame in pairs(mod.frames or {}) do
             local itemFrame = frame.itemFrame
-            if itemFrame and itemFrame.search and frame:IsShown() then
-                itemFrame:RefreshSearch()
+            if itemFrame and frame:IsShown() then
+                if itemFrame.search then
+                    itemFrame:RefreshSearch()
+                end
+                if itemFrame.itemInfoMissing then
+                    itemFrame:Regenerate()
+                end
             end
         end
     end
-    mod.RefreshActiveSearches = RefreshActiveSearches
+    mod.RefreshActiveViews = RefreshActiveViews
 
     local itemInfoWatcher = CreateFrame("Frame")
     itemInfoWatcher:RegisterEvent("GET_ITEM_INFO_RECEIVED")
     itemInfoWatcher:SetScript("OnEvent", function()
-        if searchRefreshPending then return end
-        searchRefreshPending = true
-        addon:After(SEARCH_REFRESH_DELAY, RefreshActiveSearches)
+        if itemInfoRefreshPending then return end
+        itemInfoRefreshPending = true
+        addon:After(ITEM_INFO_REFRESH_DELAY, RefreshActiveViews)
     end)
 
     function ItemFrame:AddItem(bag, slot)
@@ -1034,6 +1051,7 @@ do
 
     function ItemFrame:Regenerate()
         if not self:IsVisible() then return end
+        self.itemInfoMissing = false
         local changed = false
         for _, bag in pairs(self.bags) do
             for slot = 1, self:GetBagSize(bag) do

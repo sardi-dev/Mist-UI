@@ -602,6 +602,61 @@ Phase("bag battle pets", function()
     GameTooltip.SetInventoryItem, GameTooltip.SetHyperlink = savedSetInventory, savedSetHyperlink
 end)
 
+Phase("bag filtered view and late item details", function()
+    local addon = H.namespaces.MistUI
+    local mod = addon.BagsterModule
+    local frame = mod and mod.frames and mod.frames[1]
+    local function Check(condition, message)
+        if not condition then H.Report("bag filtered view", message) end
+    end
+    if not (frame and frame.itemFrame) then
+        H.Report("bag filtered view", "the bag window is not there")
+        return
+    end
+    local itemFrame = frame.itemFrame
+    local LATE_ITEM = 2589
+    local savedGetItemInfo = _G.GetItemInfo
+    local detailsLoaded = true
+    _G.GetItemInfo = function(item)
+        local id = tonumber(item) or tonumber(tostring(item):match("item:(%d+)"))
+        if id == LATE_ITEM and not detailsLoaded then return nil end
+        return savedGetItemInfo(item)
+    end
+
+    frame:Show()
+    H.Tick(0.3)
+    frame:SetFilter("quality", mod.QualityFlags[1])
+    local filteredItems = itemFrame.count
+    Check(filteredItems >= 2, "the rarity filter holds " .. filteredItems .. " items")
+    frame:SetFilter("quality", 0)
+    detailsLoaded = false
+    frame:SetFilter("quality", mod.QualityFlags[1])
+    Check(itemFrame.count == filteredItems - 1, "an item without details should be left out of the rarity filter, got "
+        .. itemFrame.count .. " of " .. filteredItems)
+
+    -- A burst of events re-filters once, and the item comes back
+    local regenerations = 0
+    local regenerate = itemFrame.Regenerate
+    itemFrame.Regenerate = function(self) regenerations = regenerations + 1; return regenerate(self) end
+    detailsLoaded = true
+    for _ = 1, 5 do H.Fire("GET_ITEM_INFO_RECEIVED") end
+    H.Tick(0.5)
+    Check(itemFrame.count == filteredItems, "the item did not join the rarity filter after its details arrived: "
+        .. itemFrame.count .. " of " .. filteredItems)
+    Check(regenerations == 1, "expected one re-filter for a burst of events, got " .. regenerations)
+
+    -- Once everything is known, later events leave the view alone
+    regenerations = 0
+    H.Fire("GET_ITEM_INFO_RECEIVED")
+    H.Tick(0.5)
+    Check(regenerations == 0, "the filtered view was rebuilt although no details were missing")
+
+    itemFrame.Regenerate = nil
+    frame:SetFilter("quality", 0)
+    _G.GetItemInfo = savedGetItemInfo
+    frame:Hide()
+end)
+
 Phase("guild bank", function()
     H.state.guildTabs = 2
     H.Fire("PLAYER_GUILD_UPDATE")
