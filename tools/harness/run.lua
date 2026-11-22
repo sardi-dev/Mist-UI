@@ -978,6 +978,39 @@ Phase("edit mode snap and undo", function()
     box:Hide()
 end)
 
+-- Giving a region of a protected frame another parent is blocked in combat: the party frame's
+-- status icons wait for the end of combat.
+Phase("party icons in combat", function()
+    local frame, icon = _G.PartyMemberFrame1, _G.PartyMemberFrame1PVPIcon
+    if not (frame and icon and frame.MistUI_IconContainer and PartyMemberFrame_UpdateMember) then
+        H.Report("party icons in combat", "party frame 1, its PvP icon or the icon container is missing")
+        return
+    end
+    units.party1 = Unit("Botfriend", "0x0000000000000002", 90)
+    H.state.group = true
+    icon:SetParent(frame)
+    local movedInCombat
+    local setParent = icon.SetParent
+    icon.SetParent = function(self, parent)
+        if InCombatLockdown() then movedInCombat = true end
+        return setParent(self, parent)
+    end
+    H.inCombat = true
+    H.Fire("PLAYER_REGEN_DISABLED")
+    PartyMemberFrame_UpdateMember(frame)
+    if movedInCombat then H.Report("party icons in combat", "the PvP icon got a new parent in combat") end
+    H.inCombat = false
+    H.Fire("PLAYER_REGEN_ENABLED")
+    if icon:GetParent() ~= frame.MistUI_IconContainer then
+        H.Report("party icons in combat", "the PvP icon was not moved above the border after combat")
+    end
+    icon.SetParent = nil
+    units.party1 = nil
+    H.state.group = false
+    H.Fire("GROUP_ROSTER_UPDATE")
+    H.Tick(1)
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI

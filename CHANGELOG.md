@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **Party frame icons no longer move in combat** (2026-11-22)
+  - Summary: The party frames' leader, PvP, guide and role icons are moved above the frame border only out of combat; a move asked for in combat (a member joins or zones mid-fight, or a /reload in combat) waits until combat ends.
+  - Why: Giving a region of a protected frame another parent is blocked in combat, so these updates could raise "action blocked". Found in a code audit; a harness check now covers it.
 - **Currency icons and tooltips in the bag window** (2026-11-22)
   - Summary: The currency strip at the bottom of the bag window now reads the game's watched currency info in the 5.4.8 order (name, count, icon, currency id) and shows the stock backpack currency tooltip; the arena and honor point branches of the old client are gone.
   - Why: It read the info in the 3.3.5a order, so a currency shown on the backpack (Valor, Justice) got its currency id as the icon (no icon) and never showed a tooltip. Found in a code audit; a harness check now covers it.

@@ -1241,6 +1241,31 @@ end
 -- FRAME STYLING FUNCTIONS
 -- ===============================================================
 
+-- Status icons drawn above the border; the stock code re-shows PvP, guide and role icons on updates.
+local STATUS_ICONS = { 'LeaderIcon', 'MasterIcon', 'PVPIcon', 'RoleIcon', 'GuideIcon' }
+local DYNAMIC_STATUS_ICONS = { 'PVPIcon', 'GuideIcon', 'RoleIcon' }
+
+-- Giving a region of a protected frame another parent is blocked in combat, so the move waits.
+local function MoveIconsToContainer(frame, suffixes)
+    local container = frame.MistUI_IconContainer
+    if not container then return end
+    if InCombatLockdown() then
+        if addon.CombatQueue then
+            addon.CombatQueue:Add("party_icons_" .. frame:GetName(), MoveIconsToContainer, frame, suffixes)
+        end
+        return
+    end
+    for _, suffix in ipairs(suffixes) do
+        local icon = _G[frame:GetName() .. suffix]
+        if icon then
+            if icon:GetParent() ~= container then
+                icon:SetParent(container)
+            end
+            icon:SetDrawLayer('OVERLAY', 1)
+        end
+    end
+end
+
 -- Main styling function for party frames
 local function StylePartyFrames()
     -- Skip all restyling during editor mode (prevents texture/layer race conditions on fake frames)
@@ -1350,8 +1375,13 @@ local function StylePartyFrames()
                 flash:SetDrawLayer('OVERLAY', 1)
             end
 
-            -- Create background and mark as styled
-            if not frame.MistUIStyled then
+            -- Create background and mark as styled. The first styling moves stock regions to new
+            -- parents, which combat blocks (a /reload in combat), so it waits for the end of combat.
+            if not frame.MistUIStyled and InCombatLockdown() then
+                if addon.CombatQueue then
+                    addon.CombatQueue:Add("party_style", StylePartyFrames)
+                end
+            elseif not frame.MistUIStyled then
                 -- Background (behind everything); art and spot come from ApplyPartySkin
                 frame.MistUI_Background = frame:CreateTexture(nil, 'BACKGROUND', nil, 0)
 
@@ -1394,12 +1424,7 @@ local function StylePartyFrames()
                 local name = _G[frame:GetName() .. 'Name']
                 local healthText = _G[frame:GetName() .. 'HealthBarText']
                 local manaText = _G[frame:GetName() .. 'ManaBarText']
-                local leaderIcon = _G[frame:GetName() .. 'LeaderIcon']
-                local masterLooterIcon = _G[frame:GetName() .. 'MasterIcon']
-                local pvpIcon = _G[frame:GetName() .. 'PVPIcon']
-                local stockRoleIcon = _G[frame:GetName() .. 'RoleIcon']
-                local guideIcon = _G[frame:GetName() .. 'GuideIcon']
-                
+
                 -- Text elements stay in normal layer
                 if name then
                     name:SetDrawLayer('OVERLAY', 1)
@@ -1411,27 +1436,7 @@ local function StylePartyFrames()
                     manaText:SetDrawLayer('OVERLAY', 1)
                 end
                 
-                -- Move PvP and status icons to icon container (above border)
-                if leaderIcon then
-                    leaderIcon:SetParent(frame.MistUI_IconContainer)
-                    leaderIcon:SetDrawLayer('OVERLAY', 1)
-                end
-                if masterLooterIcon then
-                    masterLooterIcon:SetParent(frame.MistUI_IconContainer)
-                    masterLooterIcon:SetDrawLayer('OVERLAY', 1)
-                end
-                if pvpIcon then
-                    pvpIcon:SetParent(frame.MistUI_IconContainer)
-                    pvpIcon:SetDrawLayer('OVERLAY', 1)
-                end
-                if stockRoleIcon then
-                    stockRoleIcon:SetParent(frame.MistUI_IconContainer)
-                    stockRoleIcon:SetDrawLayer('OVERLAY', 1)
-                end
-                if guideIcon then
-                    guideIcon:SetParent(frame.MistUI_IconContainer)
-                    guideIcon:SetDrawLayer('OVERLAY', 1)
-                end
+                MoveIconsToContainer(frame, STATUS_ICONS)
 
                 frame.MistUIStyled = true
             end
@@ -1790,27 +1795,8 @@ local function SetupPartyHooks()
             HideStockTexts(frame)
             CreateCustomTexts(frame)
             
-            -- Force reparent icons to icon container (for dynamic PvP icons)
-            if frame.MistUI_IconContainer then
-                local pvpIcon = _G[frame:GetName() .. 'PVPIcon']
-                local leaderIcon = _G[frame:GetName() .. 'LeaderIcon']
-                local guideIcon = _G[frame:GetName() .. 'GuideIcon']
-                local roleIcon = _G[frame:GetName() .. 'RoleIcon']
-                
-                if pvpIcon then
-                    pvpIcon:SetParent(frame.MistUI_IconContainer)
-                    pvpIcon:SetDrawLayer('OVERLAY', 1)
-                end
-                if guideIcon then
-                    guideIcon:SetParent(frame.MistUI_IconContainer)
-                    guideIcon:SetDrawLayer('OVERLAY', 1)
-                end
-                if roleIcon then
-                    roleIcon:SetParent(frame.MistUI_IconContainer)
-                    roleIcon:SetDrawLayer('OVERLAY', 1)
-                end
-            end
-            
+            MoveIconsToContainer(frame, DYNAMIC_STATUS_ICONS)
+
             -- Update custom health/mana text
             local healthbar = _G[frame:GetName() .. 'HealthBar']
             local manabar = _G[frame:GetName() .. 'ManaBar']
