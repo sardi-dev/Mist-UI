@@ -372,8 +372,8 @@ end
 -- Localized item class names, in the auction house order of this client. The older client had
 -- projectile and quiver classes after trade goods, which shifted everything after them.
 local TRADE_GOODS_CLASS, GEM_CLASS = 6, 8
-L.Weapon, L.Armor, L.Container, L.Consumable, L.Glyph, L.TradeGood, L.Recipe, L.Gem, L.Misc, L.Quest,
-    L.BattlePet = GetAuctionItemClasses()
+local _
+L.Weapon, L.Armor, _, L.Consumable, _, L.TradeGood, L.Recipe, L.Gem, L.Misc, L.Quest = GetAuctionItemClasses()
 L.Devices, L.Explosives = select(10, GetAuctionItemSubClasses(TRADE_GOODS_CLASS))
 L.SimpleGem = select(8, GetAuctionItemSubClasses(GEM_CLASS))
 L.QuestItemSearch = format("t:%s|%s", L.Quest or "Quest", "quest")
@@ -428,45 +428,6 @@ local function SetupDatabase()
     if not DB.bank.sets then DB.bank.sets = {} end
     if not DB.bank.exclude then DB.bank.exclude = {} end
     if not DB.bank.hiddenBags then DB.bank.hiddenBags = {} end
-
-    local localizedEquipment = addon.L and addon.L["Equipment"]
-    local localizedUsable = addon.L and addon.L["Usable"]
-    local function NormalizeLocalizedSetName(name)
-        if not name then return name end
-        if name == SET_EQUIPMENT or (localizedEquipment and name == localizedEquipment) then
-            return SET_EQUIPMENT
-        end
-        if name == SET_USABLE or (localizedUsable and name == localizedUsable) then
-            return SET_USABLE
-        end
-        return name
-    end
-
-    local function NormalizeSetList(list)
-        if not list then return end
-        for i, name in ipairs(list) do
-            list[i] = NormalizeLocalizedSetName(name)
-        end
-    end
-
-    local function NormalizeExcludeTable(exclude)
-        if not exclude then return end
-        local normalized = {}
-        for parentName, childList in pairs(exclude) do
-            normalized[NormalizeLocalizedSetName(parentName)] = childList
-        end
-        for key in pairs(exclude) do
-            exclude[key] = nil
-        end
-        for key, value in pairs(normalized) do
-            exclude[key] = value
-        end
-    end
-
-    NormalizeSetList(DB.inventory.sets)
-    NormalizeSetList(DB.bank.sets)
-    NormalizeExcludeTable(DB.inventory.exclude)
-    NormalizeExcludeTable(DB.bank.exclude)
 end
 
 function mod:GetProfile()
@@ -516,7 +477,6 @@ end
 
 mod.CT = CT
 mod.L = L
-mod.DB = DB
 mod.defaults = defaults
 mod.playerName = playerName
 mod.ItemSearch = ItemSearch

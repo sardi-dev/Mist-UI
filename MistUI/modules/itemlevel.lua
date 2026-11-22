@@ -376,8 +376,6 @@ end
 -- BANK
 -- ============================================================================
 
-local NUM_BANKGENERIC_SLOTS = 28
-
 local function UpdateBankSlots()
     if not IsContextEnabled("bank") then return end
     if not BankFrame or not BankFrame:IsShown() then return end

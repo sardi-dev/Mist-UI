@@ -16,7 +16,6 @@ local ItemQualityModule = {
     initialized = false,
     applied = false,
     hooks = {},
-    frames = {},
     overlays = {} -- Track all created overlays for cleanup
 }
 

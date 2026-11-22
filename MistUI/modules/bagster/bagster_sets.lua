@@ -176,8 +176,8 @@ do
 
     -- MISCELLANEOUS: parent set (no subtabs)
     do
-        local function isMiscItem(_, _, _, link, _, _, _, itype)
-            return itype == mod.L.Misc and (link:match("%d+") ~= "6265")
+        local function isMiscItem(_, _, _, _, _, _, _, itype)
+            return itype == mod.L.Misc
         end
         BagsterSet:Register(mod.L.Misc, [[Interface\Icons\INV_Misc_Rune_01]], isMiscItem)
         BagsterSet:Register(SET_ALL, nil, nil, mod.L.Misc)

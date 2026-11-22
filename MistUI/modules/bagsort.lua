@@ -17,9 +17,7 @@ end
 local BagSortModule = {
     initialized = false,
     applied = false,
-    originalStates = {},
     registeredEvents = {},
-    hooks = {},
     frames = {}
 }
 

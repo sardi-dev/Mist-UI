@@ -1098,15 +1098,6 @@ local function BagsterSkinFrame(frame)
         bagToggle:ClearAllPoints()
         bagToggle:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', -18, -30)
     end
-
-    -- Portrait click opens CharacterFrame
-    local portBtn = _G[frame:GetName() .. 'PortraitButton']
-    if portBtn then
-        portBtn:EnableMouse(true)
-        portBtn:SetScript('OnClick', function()
-            ToggleCharacter('PaperDollFrame')
-        end)
-    end
 end
 
 local function BagsterSkinItems(frame)
