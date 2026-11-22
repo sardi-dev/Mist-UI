@@ -93,6 +93,7 @@ contribution right now.
     npm run art        # copies the artwork from a local DragonUI checkout
     npm run harness    # plays a short session in a fake client (needs a portable Lua 5.1)
     npm run release    # builds dist/MistUI-<version>.zip from the committed state
+    npm run taint      # summarizes the client's taint log (see below)
 
 `npm run check` verifies that every file in the load list exists, that every
 Lua file parses and stays inside the limits of the client's Lua compiler, that
@@ -105,6 +106,16 @@ keys or a field of a table row. Texts built at run time are not followed.
 For the name checks it needs a copy of the stock 5.4.8 interface source, which
 is not part of this repository.
 
+### Taint log
+
+With `/console taintLog 1` the client writes `Logs/taint.log`. Run
+`npm run taint -- <path to taint.log or to the Logs folder>` (or set
+`MISTUI_TAINT_LOG`) to list only the blocked actions and tainted globals that
+MistUI or MistUI_Options caused. Identical entries are grouped and counted,
+most frequent first, with the addon file and line taken from the stack. An
+entry whose stack holds no addon file was blocked by taint that arrived
+earlier, through a global the addon changed.
+
 ### Environment variables
 
 There is no `.env` file. These optional variables exist:
@@ -114,6 +125,7 @@ There is no `.env` file. These optional variables exist:
 | `MISTUI_UI_SOURCE` | Folder with the stock 5.4.8 interface source used by `npm run check` and `npm run harness` | `../ui-source-5.4.8` |
 | `MISTUI_LUA51` | Lua 5.1 interpreter for `npm run harness` | `../tools-lua51/` |
 | `MISTUI_CLIENT_EXE` | The client program, read only, for the names of the client's own functions in `npm run harness` | none |
+| `MISTUI_TAINT_LOG` | The client's `taint.log`, or the `Logs` folder that holds it, read by `npm run taint` when no path is given | none |
 
 Without the interface source the name checks are skipped and the tool says so.
 

@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Taint log summary command** (2026-11-22)
+  - Summary: npm run taint reads the client's taint.log and lists the blocked actions and tainted globals caused by MistUI, grouped and counted, with the addon file and line.
+  - Why: Taint reports from the game were long and mixed with other addons, so the addon's own causes were hard to find.
 - **Locale check follows indirect texts** (2026-11-22)
   - Summary: npm run check now compares texts looked up through helper functions, key tables and table fields with the English locale file.
   - Why: Missing texts behind those lookups were only found in game, as errors.

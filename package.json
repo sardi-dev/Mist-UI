@@ -13,7 +13,8 @@
     "check": "node tools/check.mjs",
     "harness": "node tools/harness.mjs",
     "art": "node tools/sync-art.mjs",
-    "release": "node tools/release.mjs"
+    "release": "node tools/release.mjs",
+    "taint": "node tools/taint.mjs"
   },
   "devDependencies": {
     "luaparse": "0.3.1"

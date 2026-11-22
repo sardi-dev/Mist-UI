@@ -1,0 +1,27 @@
+01/02 10:00:01.100  Global variable SAMPLE_SETTING tainted by MistUI - Interface\FrameXML\Sample.lua:105
+01/02 10:00:01.100      SampleFrame_Update()
+01/02 10:00:01.100      Interface\AddOns\MistUI\modules\sample.lua:330 SetThing()
+01/02 10:00:01.100      Interface\AddOns\MistUI\modules\sample.lua:354
+01/02 10:00:01.100  Execution tainted by MistUI while reading SAMPLE_SETTING - Interface\FrameXML\Sample.lua:363
+01/02 10:00:01.100  SampleFrame_UpdateAnchors()
+01/02 10:00:01.100  An action was blocked in combat because of taint from MistUI - SampleFrame:SetPoint()
+01/02 10:00:01.100      Interface\FrameXML\UIParent.lua:2225 <unnamed>:ManagePositions()
+01/02 10:00:01.100      Interface\FrameXML\Sample.lua:369
+01/02 10:00:01.100
+01/02 10:00:05.200  Global variable SAMPLE_SETTING tainted by MistUI - Interface\FrameXML\Sample.lua:105
+01/02 10:00:05.200      SampleFrame_Update()
+01/02 10:00:05.200      Interface\AddOns\MistUI\modules\sample.lua:330 SetThing()
+01/02 10:00:05.200      Interface\AddOns\MistUI\modules\sample.lua:354
+01/02 10:00:05.200  An action was blocked in combat because of taint from MistUI - SampleFrame:SetPoint()
+01/02 10:00:05.200      Interface\FrameXML\UIParent.lua:2225 <unnamed>:ManagePositions()
+01/02 10:00:05.200
+01/02 10:00:09.300  An action was blocked in combat because of taint from MistUI - PickupContainerItem()
+01/02 10:00:09.300      Interface\FrameXML\ContainerFrame.lua:781 ContainerFrameItemButton_OnClick()
+01/02 10:00:09.300      Interface\AddOns\MistUI\modules\bags\slot.lua:48 OnClick()
+01/02 10:00:09.300      Interface\AddOns\MistUI_Options\panel\panel.lua:12
+01/02 10:00:12.400  An action was blocked in combat because of taint from MistUI_Options - Frame:Show()
+01/02 10:00:12.400      Interface\AddOns\MistUI_Options\panel\panel.lua:77 Toggle()
+01/02 10:00:15.500  An action was blocked in combat because of taint from OtherAddon - Frame:Hide()
+01/02 10:00:15.500      Interface\AddOns\OtherAddon\main.lua:9 Run()
+01/02 10:00:16.600  Global variable OTHER_SETTING tainted by OtherAddon - Interface\FrameXML\Sample.lua:7
+01/02 10:00:16.600      Interface\AddOns\OtherAddon\main.lua:3
