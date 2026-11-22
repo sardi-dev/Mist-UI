@@ -237,11 +237,17 @@ local STYLE_RENAMES = { square = "mistui_square" }
 local function IsSquareLayout()
     local minimapConfig = addon.db and addon.db.profile and addon.db.profile.minimap
     if not minimapConfig then return false end
-    local renamed = STYLE_RENAMES[minimapConfig.style]
+    local style = STYLE_RENAMES[minimapConfig.style] or minimapConfig.style
+    return style == "mistui_square"
+end
+
+-- Written back where settings are applied, so the getter above stays free of side effects.
+local function MigrateMinimapStyle()
+    local minimapConfig = addon.db and addon.db.profile and addon.db.profile.minimap
+    local renamed = minimapConfig and STYLE_RENAMES[minimapConfig.style]
     if renamed then
         minimapConfig.style = renamed
     end
-    return minimapConfig.style == "mistui_square"
 end
 
 local function IsMistUISquareFrame()
@@ -1158,21 +1164,30 @@ local function ReplaceStockFrame(frame)
 
 end -- End of ReplaceStockFrame function
 
+-- While the map rotates, the zone decides whether the backdrop sits centred (indoors) or raised.
+-- The mask, scale and ring size are applied where their settings change, so nothing polls them.
+local ROTATION_ZONE_EVENTS = {
+    "ZONE_CHANGED_INDOORS", "ZONE_CHANGED", "ZONE_CHANGED_NEW_AREA", "PLAYER_ENTERING_WORLD",
+}
+
 local function CreateMinimapBorderFrame(width, height)
     local minimapBorderFrame = CreateFrame('Frame', nil, UIParent)
     minimapBorderFrame:SetSize(width, height)
-    minimapBorderFrame._mistUIHeavyUpdateElapsed = 0
-    minimapBorderFrame:SetScript("OnUpdate", function(self, elapsed)
-        if not IsMistUIMinimapControlling() then return end
-
-        self._mistUIHeavyUpdateElapsed = self._mistUIHeavyUpdateElapsed + elapsed
-        if self._mistUIHeavyUpdateElapsed >= 0.1 then
-            self._mistUIHeavyUpdateElapsed = 0
-            UpdateMinimapMaskForRotation()
+    local function AlignBackdrop()
+        if IsMistUIMinimapControlling() then
             UpdateMinimapBackdropAlignment(false)
-            UpdateIndoorRotateScale()
-            UpdateMinimapCircleSize()
         end
+    end
+    minimapBorderFrame:SetScript("OnEvent", AlignBackdrop)
+    -- The frame is shown only while the map rotates, so that is the only time it listens.
+    minimapBorderFrame:SetScript("OnShow", function(self)
+        for _, event in ipairs(ROTATION_ZONE_EVENTS) do
+            self:RegisterEvent(event)
+        end
+        AlignBackdrop()
+    end)
+    minimapBorderFrame:SetScript("OnHide", function(self)
+        self:UnregisterAllEvents()
     end)
 
     do
@@ -2230,7 +2245,6 @@ function MinimapModule:RestoreMinimapSystem()
         self.frames.minimapFrame = nil
     end
     if self.borderFrame then
-        self.borderFrame:SetScript("OnUpdate", nil)
         self.borderFrame:Hide()
         self.frames.borderFrame = nil
     end
@@ -2591,6 +2605,7 @@ end
 
 -- Remove functions that no longer exist and convert to MistUI functions
 function MinimapModule:UpdateSettings()
+    MigrateMinimapStyle()
     local scale = GetEffectiveMinimapScale()
 
     if self.minimapFrame then

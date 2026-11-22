@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Minimap no longer polls while it rotates** (2026-11-22)
+  - Summary: With a rotating minimap the border helper no longer runs ten times a second. The backdrop follows zone changes and the other minimap values are set when their settings change.
+  - Why: It re-checked values that almost never change, and a getter could write the settings. Found in a code audit.
 - **Name plates do less work in raids** (2026-11-22)
   - Summary: Target and aura changes of party and raid members are handled with less work, and member aura changes are ignored when friendly name plate auras cannot be shown.
   - Why: A raid sends these events many times a second and each one searched all plates. Found in a code audit.

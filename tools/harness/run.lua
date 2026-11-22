@@ -1658,6 +1658,54 @@ Phase("nameplate group events", function()
     H.Tick(0.2)
 end)
 
+-- The minimap does not poll while the map rotates: the backdrop follows the zone events, and reading
+-- the layout never rewrites the settings.
+Phase("minimap rotation polling", function()
+    local MM = H.namespaces.MistUI.MinimapModule
+    local border = MM.borderFrame
+    if not border then
+        H.Report("minimap rotation polling", "the minimap border frame was not created")
+        return
+    end
+    local rotate = GetCVar("rotateMinimap")
+    local isIndoors = IsIndoors
+    SetCVar("rotateMinimap", "1")
+    MM.UpdateRotation()
+    if border:GetScript("OnUpdate") then
+        H.Report("minimap rotation polling", "the border frame still polls with OnUpdate")
+    end
+    IsIndoors = function() return true end
+    H.Fire("ZONE_CHANGED_INDOORS")
+    if MM.backdropYOffset ~= 0 then
+        H.Report("minimap rotation polling", "the backdrop did not move to the centre on entering a building")
+    end
+    IsIndoors = function() return false end
+    H.Fire("ZONE_CHANGED_NEW_AREA")
+    if MM.backdropYOffset ~= 3 then
+        H.Report("minimap rotation polling", "the backdrop did not move back on leaving the building")
+    end
+    SetCVar("rotateMinimap", rotate)
+    MM.UpdateRotation()
+    IsIndoors = isIndoors
+
+    -- A profile saved with the old square style name keeps it until the settings are applied.
+    local settings = H.namespaces.MistUI.db.profile.minimap
+    local style = settings.style
+    settings.style = "square"
+    if _G.GetMinimapShape() ~= "SQUARE" then
+        H.Report("minimap rotation polling", "the old square style name was not read as square")
+    end
+    if settings.style ~= "square" then
+        H.Report("minimap rotation polling", "reading the minimap shape rewrote the style setting")
+    end
+    MM:UpdateSettings()
+    if settings.style ~= "mistui_square" then
+        H.Report("minimap rotation polling", "applying the settings did not rename the old square style")
+    end
+    settings.style = style
+    MM:UpdateSettings()
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")
