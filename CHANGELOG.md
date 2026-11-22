@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **Player frame layout waits for the end of combat in a vehicle** (2026-11-22)
+  - Summary: Entering or leaving a vehicle in combat now only updates the player frame's art; the portrait, name, health bar and group icons are moved and sized once combat ends.
+  - Why: Moving the parts of the protected player frame in combat can raise "action blocked", and vehicles are often entered mid-fight. Found in a code audit; a harness check now covers it.
 - **Party frame icons no longer move in combat** (2026-11-22)
   - Summary: The party frames' leader, PvP, guide and role icons are moved above the frame border only out of combat; a move asked for in combat (a member joins or zones mid-fight, or a /reload in combat) waits until combat ends.
   - Why: Giving a region of a protected frame another parent is blocked in combat, so these updates could raise "action blocked". Found in a code audit; a harness check now covers it.

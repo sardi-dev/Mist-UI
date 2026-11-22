@@ -3197,11 +3197,15 @@ local function ApplyPlayerArtState()
     UpdateDragonVisibilityForVehicle(inVehicle, isEliteMode)
 
     UpdateGlowVisibility()
-    ChangePlayerframe()
+    -- Moving, sizing or reparenting the parts of PlayerFrame is blocked in combat (a vehicle
+    -- entered mid-fight); the PLAYER_REGEN_ENABLED handler lays the frame out afterwards.
+    if not InCombatLockdown() then
+        ChangePlayerframe()
+    end
     UpdatePlayerDragonDecoration()
 
     -- Stock owns these anchors while the vehicle art is up; ours only fit the normal frame
-    if not inVehicle then
+    if not inVehicle and not InCombatLockdown() then
         UpdateLeadershipIcons()
     end
 end
@@ -3229,6 +3233,9 @@ local function SetupPlayerEvents()
             if deferredPositionUpdate then
                 ApplyPlayerConfig()  -- Includes ApplyWidgetPosition + scale
                 ChangePlayerframe()  -- Re-apply full layout (vehicle state may have changed during combat)
+                if not IsInVehicle() then
+                    UpdateLeadershipIcons()
+                end
                 HideStockPlayerTexts()
                 deferredPositionUpdate = false
                 -- Delayed retry: the stock UI may reposition PlayerFrame after PLAYER_REGEN_ENABLED

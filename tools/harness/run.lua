@@ -1011,6 +1011,42 @@ Phase("party icons in combat", function()
     H.Tick(1)
 end)
 
+-- A vehicle entered in combat: the player frame's parts are laid out only once combat ends.
+Phase("player frame vehicle in combat", function()
+    local parts = { PlayerPortrait, PlayerName, PlayerFrameHealthBar }
+    local METHODS = { "SetPoint", "ClearAllPoints", "SetSize", "SetWidth", "SetParent" }
+    local moved = {}
+    for _, part in ipairs(parts) do
+        for _, method in ipairs(METHODS) do
+            local original = part[method]
+            part[method] = function(self, ...)
+                local caller = debug.getinfo(2, "S")
+                if InCombatLockdown() and caller and caller.source:find("MistUI", 1, true) then
+                    moved[#moved + 1] = (self:GetName() or "?") .. ":" .. method
+                end
+                return original(self, ...)
+            end
+        end
+    end
+    units.vehicle = Unit("Siege Tank", "0xF150000000000001", 90)
+    H.state.vehicle = true
+    H.inCombat = true
+    H.Fire("PLAYER_REGEN_DISABLED")
+    PlayerFrame_ToVehicleArt(PlayerFrame, "Natural")
+    if #moved > 0 then
+        H.Report("player frame vehicle in combat", "moved in combat: " .. table.concat(moved, ", "))
+    end
+    H.state.vehicle = false
+    units.vehicle = nil
+    PlayerFrame_ToPlayerArt(PlayerFrame)
+    H.inCombat = false
+    for _, part in ipairs(parts) do
+        for _, method in ipairs(METHODS) do part[method] = nil end
+    end
+    H.Fire("PLAYER_REGEN_ENABLED")
+    H.Tick(1)
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI
