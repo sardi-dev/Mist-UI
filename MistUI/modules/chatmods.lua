@@ -1485,12 +1485,6 @@ local function RestoreChatModsSystem()
         ChatModsModule.originalStates.tellTargetSlash = nil
     end
 
-    -- Restore right-click chat tab menu initializer
-    if ChatModsModule.originalStates.ChatFrame_Initialize then
-        _G.ChatFrame_Initialize = ChatModsModule.originalStates.ChatFrame_Initialize
-        ChatModsModule.originalStates.ChatFrame_Initialize = nil
-    end
-
     -- Hide copy frame
     if copyFrame then
         copyFrame:Hide()

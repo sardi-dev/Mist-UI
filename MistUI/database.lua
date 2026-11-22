@@ -849,9 +849,7 @@ local defaults = {
                 castBarOffTargetMode = "safe", -- off | safe | aggressive | hybrid. UI: enable=safe, +aggressive=aggressive, +players-only=hybrid
                 castBarHidePetCasts = true, -- all modes: hide cast bars on player pets/guardians (Water Elemental, mirror images, etc.)
                 castBarOffTarget = false, -- legacy mirror of aggressive mode
-                castBarOffTargetHostileOnly = false, -- legacy reaction filter (no longer in the settings; cleared by the nameplates tab)
                 castBarOffTargetSafeOnly = true, -- legacy mirror of safe mode (now the default)
-                castBarPvPAggressive = false, -- legacy reaction filter (no longer exposed in UI)
                 showPartyRaidCastBars = true, -- show cast bars on party/raid member nameplates
                 castBarModernIconBorder = true, -- action-bar style frame around the cast icon
                 castBarModernIconLeft = false, -- Modern style: spell icon left of the cast bar instead of under it

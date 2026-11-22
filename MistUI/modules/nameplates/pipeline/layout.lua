@@ -709,9 +709,8 @@ end
 
 local function UpdateRetailStacking()
     local cfg = NP.config.GetCfg()
-    local baseScale = cfg.globalScale or 1
-    local xspace = (cfg.retailStackingXSpace or 150) * baseScale
-    local yspace = (cfg.retailStackingYSpace or 24) * baseScale
+    local xspace = cfg.retailStackingXSpace or 150
+    local yspace = cfg.retailStackingYSpace or 24
     local originY = cfg.retailStackingOriginY or 0
     local freezeMouseover = cfg.retailStackingFreezeMouseover == true
     local stackable = stackableScratch

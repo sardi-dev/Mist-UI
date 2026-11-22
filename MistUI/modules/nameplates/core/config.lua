@@ -34,10 +34,6 @@ function NP.config.IsOffTargetCastMonitorActive(cfg)
     return mode == "aggressive" or mode == "safe" or mode == "hybrid"
 end
 
-function NP.config.IsHybridCastMode(cfg)
-    return NP.config.GetOffTargetCastMode(cfg) == "hybrid"
-end
-
 -- Effective off-target mode for one CLEU source (hybrid splits player vs NPC).
 function NP.config.ResolveEffectiveCastMode(cfg, sourceIsPlayer)
     local mode = NP.config.GetOffTargetCastMode(cfg)

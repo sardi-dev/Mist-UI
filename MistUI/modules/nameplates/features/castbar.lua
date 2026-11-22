@@ -1405,36 +1405,6 @@ local function ResetCastMonitorStickyMaps()
     end
 end
 
-local function IsPlayersOnlyMonitor(cfg)
-    if not cfg or not NP.config.IsOffTargetCastMonitorActive(cfg) then
-        return false
-    end
-    -- Hybrid does its own per-source routing; legacy players-only filter does not apply.
-    if NP.config.IsHybridCastMode(cfg) then
-        return false
-    end
-    if cfg.castBarPvPAggressive ~= true then
-        return false
-    end
-    -- When Safe: players-only only applies with hostile-only (enemy players, not allies).
-    if IsOffTargetSafeOnly(cfg) and cfg.castBarOffTargetHostileOnly ~= true then
-        return false
-    end
-    return true
-end
-
-local function ShouldRequireHostileReaction(cfg)
-    if not cfg or not NP.config.IsOffTargetCastMonitorActive(cfg) then
-        return false
-    end
-    -- Hybrid intentionally tracks both factions (enemy players and allies); the
-    -- legacy hostile-only filter is ignored.
-    if NP.config.IsHybridCastMode(cfg) then
-        return false
-    end
-    return cfg.castBarOffTargetHostileOnly == true
-end
-
 local function ShouldUseNativePatchSync(cfg)
     if not cfg or cfg.showCastBar == false then
         return false
@@ -1459,14 +1429,6 @@ local function NormalizeCombatLogFlags(flags)
         return tonumber(flags) or tonumber(flags, 16)
     end
     return flags
-end
-
-local function IsHostileCombatLogFlags(flags)
-    flags = NormalizeCombatLogFlags(flags)
-    if not flags or not COMBATLOG_OBJECT_REACTION_HOSTILE then
-        return false
-    end
-    return bit.band(flags, COMBATLOG_OBJECT_REACTION_HOSTILE) ~= 0
 end
 
 local function IsPlayerUnitFlags(flags)
@@ -1980,9 +1942,7 @@ local function TryNameMatch(sourceName, sourceFlags, sourceGUID, cfg)
     end
     if count == 1 and found then
         local isPlayer = IsPlayerUnitFlags(sourceFlags)
-        local safeOnly = IsOffTargetSafeOnly(cfg)
-        local playersOnly = IsPlayersOnlyMonitor(cfg)
-        if isPlayer and (safeOnly or playersOnly) then
+        if isPlayer and IsOffTargetSafeOnly(cfg) then
             local conf = C.CAST_PLAYER_NAME_CONFIDENCE or (C.CAST_MONITOR_MIN_CONFIDENCE or 60)
             return found, conf, "PLAYER_NAME_UNIQUE"
         end
@@ -2064,9 +2024,6 @@ local function WarmupCastSourceGUID(sourceGUID, sourceName, sourceFlags, event, 
     end
     -- Hybrid: this GUID's player/NPC nature drives the effective mode below.
     CurrentCastSourceIsPlayer = IsPlayerUnitFlags(sourceFlags)
-    if ShouldRequireHostileReaction(cfg) and not IsHostileCombatLogFlags(sourceFlags) then
-        return
-    end
     local now = GetTime and GetTime() or 0
     local cooldown = C.CAST_WARMUP_COOLDOWN or 1.0
     local nextAt = CLEU_GUID_WARMUP_AT[sourceGUID] or 0
@@ -2772,8 +2729,7 @@ function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourc
     if not CAST_BREAK_EVENTS[event] then
         return
     end
-    local destGUID, destName, destFlags, spellId, combatSpellName = ...
-    local cfg = NP.config.GetCfg()
+    local destGUID, destName, _, spellId, combatSpellName = ...
 
     if event == "SPELL_CAST_START" or event == "SPELL_CAST_SUCCESS" then
         if sourceGUID and sourceGUID ~= UnitGUID("player") then
@@ -2798,12 +2754,9 @@ function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourc
         local auraBreak = destGUID and AuraBreaksActiveCast(spellId, combatSpellName)
         if auraBreak then
             CastLog(nil, "cleu cc %s dest=%s guid=%s", tostring(combatSpellName), tostring(destName), tostring(destGUID))
-            if not ShouldRequireHostileReaction(cfg)
-                or not destFlags or IsHostileCombatLogFlags(destFlags) then
-                local plateData = FindPlateForActiveCast(destGUID, nil, destName)
-                if plateData then
-                    MonitorStopCast(plateData, true)
-                end
+            local plateData = FindPlateForActiveCast(destGUID, nil, destName)
+            if plateData then
+                MonitorStopCast(plateData, true)
             end
         end
     end
@@ -2835,12 +2788,8 @@ function NP.castbar.CastMonitorOnCombatLog(timestamp, event, sourceGUID, sourceN
         CurrentCastSourceIsPlayer = IsPlayerUnitFlags(sourceFlags)
         -- Safe mode cannot observe early player cancellations without a stop event.
         if CurrentCastSourceIsPlayer and IsOffTargetSafeOnly(cfg) then return end
-        if ShouldRequireHostileReaction(cfg) and not IsHostileCombatLogFlags(sourceFlags) then
-            return
-        end
         if sourceGUID == UnitGUID("player") then return end
         if NP.config.HidePetCasts(cfg) and IsPetOrGuardianFlags(sourceFlags) then return end
-        if IsPlayersOnlyMonitor(cfg) and not IsPlayerUnitFlags(sourceFlags) then return end
 
         spellId = tonumber(spellId)
         if not spellId then return end
@@ -3033,10 +2982,8 @@ function NP.castbar.SyncOffTargetMonitorFromConfig(cfg)
         signature = "master:off"
     else
         local mode = NP.config.GetOffTargetCastMode(cfg)
-        local hostileOnly = (cfg.castBarOffTargetHostileOnly == true) and 1 or 0
-        local playersOnly = IsPlayersOnlyMonitor(cfg) and 1 or 0
         local hidePets = NP.config.HidePetCasts(cfg) and 1 or 0
-        signature = string.format("%s:%d:%d:%d", mode, hostileOnly, playersOnly, hidePets)
+        signature = string.format("%s:%d", mode, hidePets)
     end
 
     local monitorEnabled = (signature ~= "master:off")

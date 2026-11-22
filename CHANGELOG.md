@@ -44,6 +44,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Removed
+- **Removed dead nameplate filters and chat restore code** (2026-11-22)
+  - Summary: Removed two legacy nameplate cast bar filters that were always off, an unused stacking scale read and a chat restore step that never ran.
+  - Why: A code audit found that none of these could change what the player sees.
 - **Removed unused bag code** (2026-11-22)
   - Summary: Removed bag module code that never ran or never had any effect on the 5.4.8 client.
   - Why: A code audit found these leftovers from the 3.3.5a version and from earlier ports.

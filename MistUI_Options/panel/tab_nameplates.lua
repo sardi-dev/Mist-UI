@@ -1344,8 +1344,7 @@ local function BuildBarsSubTab(scroll)
     end
 
     -- The three nested checkboxes (enable / aggressive / players-only) collapse to
-    -- one of the four engine modes. The old reaction filters (hostile/enemy-player only) are
-    -- not offered; their saved values are cleared so they never affect this UI.
+    -- one of the four engine modes.
     local function ApplyOffTargetState(enabled, aggressive, playersOnly)
         local mode
         if not enabled then
@@ -1360,8 +1359,6 @@ local function BuildBarsSubTab(scroll)
         C:SetDBValue(DB .. ".castBarOffTargetMode", mode)
         C:SetDBValue(DB .. ".castBarOffTarget", mode == "aggressive")
         C:SetDBValue(DB .. ".castBarOffTargetSafeOnly", mode == "safe")
-        C:SetDBValue(DB .. ".castBarPvPAggressive", false)
-        C:SetDBValue(DB .. ".castBarOffTargetHostileOnly", false)
     end
 
     local function RebuildNameplatesTab()
