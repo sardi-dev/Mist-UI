@@ -1188,6 +1188,35 @@ Phase("caught errors in the error log", function()
     addon.ErrorLog.Clear()
 end)
 
+-- The module commands use the Modules tab's switch: a module that needs a reload is staged,
+-- and the saved setting keeps saying what is running until then.
+Phase("module commands stage like the modules tab", function()
+    local addon = H.namespaces.MistUI
+    local cfg = addon:GetModuleConfig("worldmap")
+    -- The reload prompt must find a free popup slot, or the stage is dropped at once.
+    local showPopup, popupVisible, hidePopup = StaticPopup_Show, StaticPopup_Visible, StaticPopup_Hide
+    local prompt
+    StaticPopup_Show = function(which) prompt = which; return UIParent end
+    StaticPopup_Visible = function(which) return prompt == which end
+    StaticPopup_Hide = function(which) if prompt == which then prompt = nil end end
+    Slash("/mist worldmap off")
+    if not prompt then
+        H.Report("module commands stage like the modules tab", "/mist worldmap off showed no reload prompt")
+    end
+    if cfg.enabled == false then
+        H.Report("module commands stage like the modules tab", "/mist worldmap off wrote the saved setting before a reload")
+    end
+    if addon.Reload.ModuleState("worldmap") ~= false then
+        H.Report("module commands stage like the modules tab", "/mist worldmap off was not staged for the reload")
+    end
+    Slash("/mist worldmap on")
+    if addon.Reload.HasStaged() then
+        H.Report("module commands stage like the modules tab", "/mist worldmap on left a change staged")
+    end
+    StaticPopup_Show, StaticPopup_Visible, StaticPopup_Hide = showPopup, popupVisible, hidePopup
+    cfg.enabled = true
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI

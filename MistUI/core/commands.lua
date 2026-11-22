@@ -216,47 +216,30 @@ local function ShowMouseFocus()
     end
 end
 
--- Turns the nameplate module on or off at once, so a fault on the plates can be stopped mid-session.
-local function SetNameplates(arg)
+-- The same switch as the Modules tab: a change the module cannot make live (its hooks stay
+-- until a reload) is staged and the reload prompt appears, so the saved settings keep
+-- describing what is running.
+local function ToggleModuleCommand(name, arg, stateText, unavailableText)
+    local registry = addon.ModuleRegistry
+    if not (registry and registry.modules[name]) then
+        addon:Print(unavailableText)
+        return
+    end
     local normalized = arg and arg:lower() or ""
-    local cfg = addon:GetModuleConfig("nameplates")
-    if not cfg or not addon.ApplyNameplatesSystem then
-        addon:Print(L["Nameplates module not available."])
-        return
+    if normalized == "on" or normalized == "off" then
+        addon:SetModuleEnabled(name, normalized == "on")
     end
-    if normalized ~= "on" and normalized ~= "off" then
-        addon:Print(string.format(L["Nameplates are %s. Usage: /mistui nameplates on|off"],
-            cfg.enabled ~= false and L["enabled"] or L["disabled"]))
-        return
-    end
-    if InCombatLockdown() then
-        addon:Print(L["Cannot change the nameplates during combat."])
-        return
-    end
-    cfg.enabled = normalized == "on"
-    if cfg.enabled then
-        addon:ApplyNameplatesSystem()
-    else
-        addon:RestoreNameplatesSystem()
-    end
-    addon:Print(string.format(L["Nameplates are %s. Usage: /mistui nameplates on|off"],
-        cfg.enabled and L["enabled"] or L["disabled"]))
+    addon:Print(string.format(stateText, addon.Reload.ModuleState(name) and L["enabled"] or L["disabled"]))
 end
 
--- The map keeps its hooks until a reload, so the switch is saved and applied by the next one.
+local function SetNameplates(arg)
+    ToggleModuleCommand("nameplates", arg, L["Nameplates are %s. Usage: /mistui nameplates on|off"],
+        L["Nameplates module not available."])
+end
+
 local function SetWorldMap(arg)
-    local normalized = arg and arg:lower() or ""
-    local cfg = addon:GetModuleConfig("worldmap")
-    if not cfg then
-        addon:Print(L["World map module not available."])
-        return
-    end
-    if normalized == "on" or normalized == "off" then
-        cfg.enabled = normalized == "on"
-        addon:Print(L["Type /reload to apply the change."])
-    end
-    addon:Print(string.format(L["The world map is %s. Usage: /mistui worldmap on|off"],
-        cfg.enabled ~= false and L["enabled"] or L["disabled"]))
+    ToggleModuleCommand("worldmap", arg, L["The world map is %s. Usage: /mistui worldmap on|off"],
+        L["World map module not available."])
 end
 
 -- Print version info
