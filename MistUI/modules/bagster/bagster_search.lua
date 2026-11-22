@@ -7,6 +7,8 @@ local type, tostring, tonumber, pcall, pairs, ipairs = type, tostring, tonumber,
 local strfind, strlower, strmatch, strsub = string.find, string.lower, string.match, string.sub
 local GetItemInfo = GetItemInfo
 
+local BattlePet = addon.BagsterBattlePet
+
 local SCANNER_NAME = "MistUI_BagsterSearchScanner"
 local PLAN_CACHE_LIMIT = 64
 
@@ -56,7 +58,10 @@ local function ScanLink(link)
         scanner = CreateFrame("GameTooltip", SCANNER_NAME, UIParent, "GameTooltipTemplate")
     end
     scanner:SetOwner(UIParent, "ANCHOR_NONE")
-    scanner:SetHyperlink(link)
+    -- A caged pet link is not an item link; it has no tooltip lines to read.
+    if not BattlePet.IsLink(link) then
+        scanner:SetHyperlink(link)
+    end
     return scanner:NumLines() or 0
 end
 

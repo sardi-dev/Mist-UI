@@ -4,6 +4,7 @@
 -- UI classes: ItemSlot, ItemFrame, Bag, MoneyFrame, TokenBar, quality/side/bottom filters.
 local addon = select(2, ...)
 local mod = addon.BagsterModule
+local BattlePet = addon.BagsterBattlePet
 
 local format = string.format
 local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
@@ -301,7 +302,15 @@ do
                 -- BANK_CONTAINER slots need the bank-specific tooltip API
                 if self:GetItem() then
                     self:AnchorTooltip()
-                    GameTooltip:SetInventoryItem("player", BankButtonIDToInvSlotID(self:GetID()))
+                    -- A caged battle pet returns its details instead of filling the tooltip, as in the stock bank.
+                    local _, _, _, speciesID, level, breedQuality, maxHealth, power, speed, name =
+                        GameTooltip:SetInventoryItem("player", BankButtonIDToInvSlotID(self:GetID()))
+                    if speciesID and speciesID > 0 then
+                        BattlePetToolTip_Show(speciesID, level, breedQuality, maxHealth, power, speed, name)
+                        CursorUpdate(self)
+                        self.UpdateTooltip = self.OnEnter
+                        return
+                    end
                     self:AddItemCount()
                     GameTooltip:Show()
                     CursorUpdate(self)
@@ -345,6 +354,7 @@ do
         self:SetScript("OnUpdate", nil)
         self.UpdateTooltip = nil
         GameTooltip:Hide()
+        BattlePet.HideTooltip()
         if GameTooltip.shoppingTooltips then
             for _, tt in ipairs(GameTooltip.shoppingTooltips) do
                 tt:Hide()
@@ -677,14 +687,21 @@ do
             parent:LockHighlight()
             if parent:IsCached() and parent:GetItem() then
                 ItemSlot.AnchorTooltip(self)
-                GameTooltip:SetHyperlink(parent:GetItem())
-                parent:AddItemCount()
-                GameTooltip:Show()
+                local link = parent:GetItem()
+                -- A saved pet only has its link; the item tooltip cannot show it.
+                if BattlePet.IsLink(link) then
+                    BattlePet.ShowTooltip(link)
+                else
+                    GameTooltip:SetHyperlink(link)
+                    parent:AddItemCount()
+                    GameTooltip:Show()
+                end
             end
         end
 
         local function Slot_OnLeave(self)
             GameTooltip:Hide()
+            BattlePet.HideTooltip()
             self:Hide()
         end
 

@@ -27,6 +27,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Caged battle pets show correctly in the bag window** (2026-11-22)
+  - Summary: Pets in cages now show the pet tooltip and icon in the main
+  - Why: Pet links were handled as items, which gave blank or wrong tooltips
 - **Sell Scrap sells in steps and respects locked slots** (2026-11-22)
   - Summary: The Sell Scrap button now sells a few stacks at a time, leaves
   - Why: Selling everything in one frame could disconnect you on a full bag

@@ -528,6 +528,80 @@ Phase("bag scrap selling", function()
     restore()
 end)
 
+Phase("bag battle pets", function()
+    local addon = H.namespaces.MistUI
+    local mod = addon.BagsterModule
+    local function Check(condition, message)
+        if not condition then H.Report("bag battle pets", message) end
+    end
+    local PET_LINK = "|cff0070dd|Hbattlepet:244:1:3:155:10:10:0000000000000001|h[Cat]|h|r"
+    local ITEM_LINK = "|cffffffff|Hitem:2589:0:0:0:0:0:0:0:90:0|h[Linen Cloth]|h|r"
+    local PET_ICON = "Interface\Icons\Pet_Cat"
+
+    local savedJournal, savedShow, savedTooltip = _G.C_PetJournal, _G.BattlePetToolTip_Show, _G.BattlePetTooltip
+    local savedSetInventory, savedSetHyperlink = GameTooltip.SetInventoryItem, GameTooltip.SetHyperlink
+    local shown, petTooltipHidden, hyperlinks = {}, 0, {}
+    _G.C_PetJournal = { GetPetInfoBySpeciesID = function() return "Cat", PET_ICON, 8 end }
+    _G.BattlePetToolTip_Show = function(...) shown[#shown + 1] = { ... } end
+    _G.BattlePetTooltip = { Hide = function() petTooltipHidden = petTooltipHidden + 1 end }
+    GameTooltip.SetHyperlink = function(_, link) hyperlinks[#hyperlinks + 1] = link end
+
+    -- The icon and quality of a pet saved for another character come from the link
+    local root = addon.db.global.bagsterCache or {}
+    addon.db.global.bagsterCache = root
+    root[GetRealmName() .. "|Alt"] = { bags = { [0] = { size = 16, slots = { [3] = { link = PET_LINK, count = 1 } } } } }
+    local icon, _, _, quality = mod("ItemSlotInfo"):GetItemInfo("Alt", 0, 3)
+    Check(icon == PET_ICON, "a saved pet has icon " .. tostring(icon))
+    Check(quality == 3, "a saved pet has quality " .. tostring(quality))
+    root[GetRealmName() .. "|Alt"] = nil
+
+    -- Hovering a saved pet shows the pet tooltip, not an item tooltip
+    local slot = mod.ItemSlot:New()
+    slot.IsCached = function() return true end
+    slot.GetItem = function() return PET_LINK end
+    local dummy = mod.ItemSlot:GetDummyItemSlot()
+    dummy:SetParent(slot)
+    H.FireScript(dummy, "OnEnter")
+    Check(#hyperlinks == 0, "an item tooltip was asked to show a pet link")
+    Check(shown[1] and shown[1][1] == 244 and shown[1][2] == 1 and shown[1][3] == 3 and shown[1][7] == "Cat",
+        "the pet tooltip was not shown for a saved pet")
+    H.FireScript(dummy, "OnLeave")
+    Check(petTooltipHidden > 0, "the pet tooltip stayed after the pointer left a saved pet")
+
+    -- A pet in the main bank slot is read from the slot tooltip call, as the stock bank does
+    shown = {}
+    local bankSlot = mod.ItemSlot:New()
+    bankSlot.IsCached = function() return false end
+    bankSlot.IsBank = function() return true end
+    bankSlot.GetItem = function() return PET_LINK end
+    GameTooltip.SetInventoryItem = function() return true, false, 0, 244, 1, 3, 155, 10, 10, "Cat" end
+    H.FireScript(bankSlot, "OnEnter")
+    Check(shown[1] and shown[1][1] == 244 and shown[1][4] == 155, "the pet tooltip was not shown for a pet in the bank")
+    petTooltipHidden = 0
+    H.FireScript(bankSlot, "OnLeave")
+    Check(petTooltipHidden > 0, "the pet tooltip stayed after the pointer left a bank pet")
+    bankSlot:Free()
+    slot:Free()
+
+    -- The bag search must not hand a pet link to the item tooltip scanner
+    local search = addon.BagsterItemSearch
+    search:Find(ITEM_LINK, "tt:cloth")
+    local scanner = _G.MistUI_BagsterSearchScanner
+    if scanner then
+        local scanned = {}
+        scanner.SetHyperlink = function(_, link) scanned[#scanned + 1] = link end
+        search:Find(PET_LINK, "tt:cat")
+        search:Find(PET_LINK, "boe")
+        Check(#scanned == 0, "the search scanned a pet link as an item")
+        scanner.SetHyperlink = nil
+    else
+        H.Report("bag battle pets", "the search scanner was not created")
+    end
+
+    _G.C_PetJournal, _G.BattlePetToolTip_Show, _G.BattlePetTooltip = savedJournal, savedShow, savedTooltip
+    GameTooltip.SetInventoryItem, GameTooltip.SetHyperlink = savedSetInventory, savedSetHyperlink
+end)
+
 Phase("guild bank", function()
     H.state.guildTabs = 2
     H.Fire("PLAYER_GUILD_UPDATE")

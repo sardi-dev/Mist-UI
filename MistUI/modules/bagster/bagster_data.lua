@@ -4,6 +4,18 @@
 -- Event bus (Envoy), inventory event tracking, bank cache, player/bag/item slot info.
 local addon = select(2, ...)
 local mod = addon.BagsterModule
+local BattlePet = addon.BagsterBattlePet
+
+-- GetItemIcon and GetItemInfo know nothing about a caged battle pet link.
+local function LinkIcon(link)
+    if BattlePet.IsLink(link) then return BattlePet.GetIcon(link) end
+    return GetItemIcon(link)
+end
+
+local function LinkQuality(link)
+    if BattlePet.IsLink(link) then return BattlePet.GetQuality(link) end
+    return (select(3, GetItemInfo(link)))
+end
 
 -- ============================================================================
 -- ENVOY (EVENT BUS)
@@ -771,7 +783,7 @@ do
         if player ~= mod.playerName then
             local link, count = mod("BankCache"):GetStoredItem(player, bag, slot)
             if not link then return nil end
-            return GetItemIcon(link), count, false, select(3, GetItemInfo(link)), false, false, link
+            return LinkIcon(link), count, false, LinkQuality(link), false, false, link
         end
 
         local BagSlotInfo = mod.BagSlotInfo
@@ -788,9 +800,7 @@ do
             if not link then
                 return nil
             end
-            local texture = GetItemIcon(link)
-            local quality = select(3, GetItemInfo(link))
-            return texture, count, false, quality, false, false, link
+            return LinkIcon(link), count, false, LinkQuality(link), false, false, link
         end
 
         local texture, count, locked, quality, readable, lootable, link = GetContainerItemInfo(bag, slot)
