@@ -2,18 +2,13 @@
 
 -- ============================================================================
 -- MistUI - Core Utilities
--- Base runtime setup: noop, class detection, API tables.
+-- Base runtime setup: API tables.
 -- ============================================================================
 
 local addon = select(2, ...)
 
 local type, select, pairs, ipairs, error = type, select, pairs, ipairs, error
 local tostring, unpack, getmetatable, max = tostring, unpack, getmetatable, math.max
-
-local function doNothing() end
-
-addon._noop = doNothing
-addon._class = (select(2, UnitClass("player")))
 
 -- Modules alias these two tables while loading, so they must never be swapped for new ones.
 local api, functions = {}, {}
@@ -59,10 +54,6 @@ local function eachOwnTexture(frame, action, ...)
 	end
 end
 
-local function clearTexture(region)
-	region:SetTexture(nil)
-end
-
 local function setAtlas(texture, name, useAtlasSize)
 	if not name then
 		texture:SetTexture(nil)
@@ -97,53 +88,12 @@ end
 api.SetAtlasTexture = setAtlas
 api.SetSinglePoint = clearThenPoint
 
-api.StripOwnTextures = function(frame)
-	eachOwnTexture(frame, clearTexture)
-end
-
 -- Deliberately asymmetric: right/bottom scale from 0 and are floored at the current left/top edge.
 api.SetSubTexCoord = function(texture, left, right, top, bottom)
 	local ulx, uly, _, lly, urx = texture:GetTexCoord()
 	local x1, y1 = ulx + (urx - ulx) * left, uly + (lly - uly) * top
 	local x2, y2 = max(urx * right, ulx), max(lly * bottom, uly)
 	texture:SetTexCoord(x1, y1, x1, y2, x2, y1, x2, y2)
-end
-
-api.SetShownCompat = function(widget, show)
-	if show then
-		widget:Show()
-	else
-		widget:Hide()
-	end
-end
-
-local DIVIDER_PREFIX = "ui-hud-actionbar-frame-divider-threeslice-"
-local DIVIDER_EDGES = {
-	{ field = "dividerTop", suffix = "edgetop", y = 39 },
-	{ field = "dividerBottom", suffix = "edgebottom", y = 9 },
-}
-
-local function newBorderTexture(holder, field)
-	local texture = holder:CreateTexture(nil, "BORDER")
-	holder[field] = texture
-	return texture
-end
-
-functions.AddBarDividers = function(button)
-	local holder = button:GetParent()
-	local edges = {}
-	for index, edge in ipairs(DIVIDER_EDGES) do
-		local piece = newBorderTexture(holder, edge.field)
-		piece:SetPoint("TOPLEFT", button, "BOTTOMRIGHT", -3, edge.y)
-		setAtlas(piece, DIVIDER_PREFIX .. edge.suffix, true)
-		edges[index] = piece
-	end
-
-	-- The second CENTER anchor replaces the first, so the middle piece hangs off the bottom edge.
-	local middle = newBorderTexture(holder, "dividerMid")
-	middle:SetPoint("CENTER", edges[1], "CENTER", 0, -15)
-	middle:SetPoint("CENTER", edges[2], "CENTER", 0, 15)
-	setAtlas(middle, "!" .. DIVIDER_PREFIX .. "center", true)
 end
 
 local function centerOnParent(region)

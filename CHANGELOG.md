@@ -44,6 +44,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Removed
+- **Removed unused helpers and compat shims** (2026-11-22)
+  - Summary: Removed helper functions nothing called and two shims that only older clients needed.
+  - Why: A code audit found them with no callers or needed only for 3.3.5a.
 - **Removed unused core code** (2026-11-22)
   - Summary: Removed core helper functions, fallbacks and settings that nothing used any more.
   - Why: A code audit found them with no callers, so they only made the core harder to read.

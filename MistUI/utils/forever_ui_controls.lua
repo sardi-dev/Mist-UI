@@ -2068,8 +2068,7 @@ local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
         syncThumb(state)
     end
     slider:HookScript("OnValueChanged", sync)
-    -- Not every client's Slider has this script; the range also arrives through the scroll frame below.
-    pcall(slider.HookScript, slider, "OnMinMaxChanged", sync)
+    slider:HookScript("OnMinMaxChanged", sync)
     slider:HookScript("OnSizeChanged", function()
         layoutGrabber(state)
         syncThumb(state)

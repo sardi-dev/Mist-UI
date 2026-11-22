@@ -613,7 +613,7 @@ local function UpdateView(view, count, wanted, animate)
             end
         end
         if not fadeOut then
-            element:SetShownCompat(full or not colorblind)
+            element:SetShown(full or not colorblind)
         end
     end
 
