@@ -4,6 +4,35 @@ Each entry: date, description, location, suggested fix.
 
 ## Open
 
+- **2026-11-22 - Code audit fixes: checked offline only.**
+  Every fix in the Unreleased changelog section has a harness check, but none has run in the game.
+  To check in the game: empty main bar slots still show (`modules/buttons.lua`, the grid share is now
+  set by a secure snippet); a bank and a guild bank sort finish normally (`modules/bagsort.lua` now
+  stops when a source slot changed: if normal sorts stop with "items in your bags changed", the
+  check runs before earlier moves land); sell scrap with a locked gray and a vendor closed mid-sale;
+  a caged pet in the bank slot, a bag and another character's bags (`bagster/bagster_battlepet.lua`);
+  a vehicle entered in combat and a party member joining in combat; name plates show, hide and
+  recycle with the right name, boss clamp, "Allow Nameplate Overlap" with stacking on, and the four
+  name plate settings after a /reload and with the module off; the rotating minimap backdrop indoors
+  and outdoors; bank quality borders now appear about 0.2 seconds after a move.
+  Suggested fix: cover each in the next in-game test, then read the taint log with `npm run taint`.
+
+- **2026-11-22 - Audit leftovers, not fixed.**
+  (1) Bag search by name or type finds no caged battle pets (`bagster/bagster_search.lua`: the client
+  has no item details for pet links); suggested fix: match the pet species name.
+  (2) The name plate engine still does several passes over every plate each frame
+  (`nameplates/pipeline/engine.lua`, `EngineOnUpdate`); deferred until the plates are tested in
+  game. (3) The name plate cast mode falls back to "hybrid" in `nameplates/core/config.lua` but to
+  "safe" in `MistUI_Options/panel/tab_nameplates.lua`; pick one. (4) `native_style.lua` reads
+  `addon.NpcRareRanks`, which nothing defines (a dropped data table); remove the reference.
+  (5) Unused after the cleanup: the `hasTarget` field of `RegisterEditableFrame`, `addon.Commands`,
+  `addon:tcount`, the action bar divider atlas entries; `tests/bagster-texts.test.mjs` is covered by
+  `npm run check` now. (6) The harness combat check only blocks `SetParent` on regions of protected
+  frames; widen `REGION_METHODS` in `tools/harness/fake_client.lua` if the game shows more blocked.
+  (7) Four ways to postpone work until combat ends (`addon.CombatQueue`, `deferredPositionUpdate` in
+  `unitframes/player.lua`, `pendingRefresh` in `modules/buttons.lua`, a silent skip in
+  `castbar.lua` `UpdateWidgets`); suggested fix: one queue, after the in-game test.
+
 - **2026-11-17 - Review follow-ups and new features: checked offline only.**
   Not run in the game yet: the raid frames restyle (`modules/raidframes.lua`, decision 0011), the
   profile per specialization prompt (`core/spec_profiles.lua`), edit mode snap, guide lines and undo
