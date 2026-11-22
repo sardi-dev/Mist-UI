@@ -524,3 +524,28 @@ ChatTypeInfo = setmetatable({}, { __index = function(t, k)
     rawset(t, k, v)
     return v
 end })
+
+-- Chat message filters, run the way ChatFrame_MessageEventHandler runs them: a true first
+-- result hides the line, a text result replaces the arguments for the next filter.
+local chatFilters = {}
+ChatFrame_AddMessageEventFilter = function(event, filter)
+    chatFilters[event] = chatFilters[event] or {}
+    for _, known in ipairs(chatFilters[event]) do
+        if known == filter then return end
+    end
+    table.insert(chatFilters[event], filter)
+end
+ChatFrame_RemoveMessageEventFilter = function(event, filter)
+    for index, known in ipairs(chatFilters[event] or {}) do
+        if known == filter then table.remove(chatFilters[event], index) break end
+    end
+end
+-- Returns hidden (boolean), then the message as the filters left it.
+function H.RunChatFilters(event, msg, author)
+    for _, filter in ipairs(chatFilters[event] or {}) do
+        local hide, newMsg, newAuthor = filter(nil, event, msg, author)
+        if hide then return true, msg end
+        if newMsg then msg, author = newMsg, newAuthor end
+    end
+    return false, msg
+end

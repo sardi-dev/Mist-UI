@@ -15,6 +15,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Repeated away replies show again after a minute** (2026-11-22)
+  - Summary: An away or do-not-disturb auto-reply is hidden only if the same player sent the same text in the last 60 seconds. Older entries are forgotten.
+  - Why: A later identical reply was never shown for the rest of the session and the list kept growing. Found in a code audit.
 - **Minimap border frame hides with the interface** (2026-11-22)
   - Summary: The helper frame behind the minimap border now belongs to the interface parent, so hiding the interface with Alt+Z hides it too.
   - Why: It had no parent because of a wrong argument order. Found in a code audit.

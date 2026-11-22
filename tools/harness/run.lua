@@ -1377,6 +1377,21 @@ Phase("minimap border frame", function()
     end
 end)
 
+-- An AFK/DND auto-reply is hidden only when it repeats within a minute, and old entries are dropped.
+Phase("chat afk dedup", function()
+    local function Shown(author, text)
+        return not H.RunChatFilters("CHAT_MSG_AFK", text, author)
+    end
+    if not Shown("Harnessone", "Away at lunch") then H.Report("chat afk dedup", "the first auto-reply was hidden") end
+    H.now = H.now + 10
+    if Shown("Harnessone", "Away at lunch") then H.Report("chat afk dedup", "a repeat after 10 seconds was shown") end
+    if not Shown("Harnesstwo", "Away at lunch") then H.Report("chat afk dedup", "another author's auto-reply was hidden") end
+    H.now = H.now + 3600
+    if not Shown("Harnessone", "Away at lunch") then
+        H.Report("chat afk dedup", "a repeat an hour later was swallowed")
+    end
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")

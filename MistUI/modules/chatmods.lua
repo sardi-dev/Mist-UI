@@ -930,13 +930,24 @@ end
 -- AFK / DND MESSAGE DEDUP
 -- ============================================================================
 
+-- The server repeats an auto-reply on every whisper; only a repeat this soon is noise.
+local AFK_DND_DEDUP_SECONDS = 60
+
 local afkDndCache = {}
 local function FilterAfkDnd(self, event, msg, author, ...)
     local key = (event or "") .. "\031" .. (author or "")
-    if msg and afkDndCache[key] and afkDndCache[key] == msg then
+    local now = GetTime()
+    local seen = afkDndCache[key]
+    if msg and seen and seen.msg == msg and now - seen.time < AFK_DND_DEDUP_SECONDS then
         return true
     end
-    afkDndCache[key] = msg
+    -- Dropped here, where the cache grows, so it never outlives the window by much.
+    for staleKey, entry in pairs(afkDndCache) do
+        if now - entry.time >= AFK_DND_DEDUP_SECONDS then
+            afkDndCache[staleKey] = nil
+        end
+    end
+    afkDndCache[key] = { msg = msg, time = now }
     return false, msg, author, ...
 end
 
