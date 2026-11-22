@@ -229,102 +229,109 @@ end
 
 -- CVars and config snapshot
 
-function E.SyncThreatCVar()
-    if not GetCVar or not SetCVar then return end
-    -- Shared with unitframes threat-%; forced for whole session, not just nameplate glow.
-    if not NP.module.threatCVarApplied then
-        NP.module.savedThreatWarning = GetCVar("threatWarning")
-        NP.module.threatCVarApplied = true
-    end
-    -- Skip SetCVar when already at target value.
-    if GetCVar("threatWarning") ~= "3" then
-        SetCVar("threatWarning", "3")
-    end
-end
-
-function E.SyncEnemyClassColorCVar()
-    if not GetCVar or not SetCVar then return end
-    local cfg = NP.config.GetCfg()
-    if not NP.module.classColorCVarApplied then
-        NP.module.savedShowClassColorInNameplate = GetCVar("ShowClassColorInNameplate")
-        NP.module.classColorCVarApplied = true
-    end
-    local want = (cfg.enemyPlayerClassColors ~= false) and "1" or "0"
-    if GetCVar("ShowClassColorInNameplate") ~= want then
-        SetCVar("ShowClassColorInNameplate", want)
-    end
+-- The user's own values of the CVars this module forces, keyed by CVar name. They live in saved
+-- variables because after a /reload the live value is already the forced one, so a copy kept only
+-- in memory would "restore" the forced value. An entry exists only while its CVar is forced.
+local function CVarOriginals()
+    local global = addon.db.global
+    global.nameplateCVarOriginals = global.nameplateCVarOriginals or {}
+    return global.nameplateCVarOriginals
 end
 
 -- MistUI's own stacking needs the client to let plates overlap. The client's motion types
 -- count from 1 (1 = overlapping, 2 = stacking, 3 = spreading); the console variable counts from 0.
 local OVERLAPPING_MOTION_TYPE = 1
+local MOTION_CVAR = "nameplateMotion"
+
+local function WriteCVar(name, value)
+    -- The motion variable only takes effect live through the client's own setter.
+    if name == MOTION_CVAR then
+        SetNamePlateMotionType(tonumber(value) + 1)
+    else
+        SetCVar(name, value)
+    end
+end
+
+local function ForceCVar(name, value)
+    local originals = CVarOriginals()
+    local current = GetCVar(name)
+    if originals[name] == nil then
+        originals[name] = current
+    end
+    if current ~= value then
+        WriteCVar(name, value)
+    end
+end
+
+local function RestoreCVar(name)
+    local originals = CVarOriginals()
+    local saved = originals[name]
+    if saved == nil then return end
+    if GetCVar(name) ~= saved then
+        WriteCVar(name, saved)
+    end
+    originals[name] = nil
+end
+
+function E.SyncThreatCVar()
+    -- Shared with unitframes threat-%; forced for whole session, not just nameplate glow.
+    ForceCVar("threatWarning", "3")
+end
+
+function E.SyncEnemyClassColorCVar()
+    local cfg = NP.config.GetCfg()
+    ForceCVar("ShowClassColorInNameplate", (cfg.enemyPlayerClassColors ~= false) and "1" or "0")
+end
 
 function E.SyncRetailStackingCVars()
     local cfg = NP.config.GetCfg()
-    if not GetCVar then return end
 
     if NP.config.IsRetailBehavior() and cfg.retailStackingEnabled == true then
-        local current = (tonumber(GetCVar("nameplateMotion")) or 0) + 1
-        if NP.module.savedNameplateMotion == nil then
-            NP.module.savedNameplateMotion = current
-        end
-        if current ~= OVERLAPPING_MOTION_TYPE then
-            SetNamePlateMotionType(OVERLAPPING_MOTION_TYPE)
-        end
-    elseif NP.module.savedNameplateMotion ~= nil then
-        SetNamePlateMotionType(NP.module.savedNameplateMotion)
-        NP.module.savedNameplateMotion = nil
+        ForceCVar(MOTION_CVAR, tostring(OVERLAPPING_MOTION_TYPE - 1))
+    else
+        RestoreCVar(MOTION_CVAR)
+    end
+end
+
+-- The overlap toggle in the settings. While stacking holds the plates overlapping, the user's pick
+-- is kept as the value to put back, so turning stacking off later does not undo it.
+function E.GetUserNameplateMotion()
+    local held = CVarOriginals()[MOTION_CVAR]
+    return (tonumber(held or GetCVar(MOTION_CVAR)) or 1) + 1
+end
+
+function E.SetUserNameplateMotion(motionType)
+    local originals = CVarOriginals()
+    if originals[MOTION_CVAR] ~= nil then
+        originals[MOTION_CVAR] = tostring(motionType - 1)
+    else
+        SetNamePlateMotionType(motionType)
     end
 end
 
 function E.SyncShowVKeyCastbarCVar()
-    if not GetCVar or not SetCVar then return end
     local cfg = NP.config.GetCfg()
-    local cvar = "showVKeyCastbar"
-    local onlyTargetCVar = "showVKeyCastbarOnlyOnTarget"
-
-    local function EnsureSaved()
-        if NP.module.savedShowVKeyCastbar == nil then
-            NP.module.savedShowVKeyCastbar = GetCVar(cvar)
-        end
-        if NP.module.savedShowVKeyCastbarOnlyOnTarget == nil then
-            NP.module.savedShowVKeyCastbarOnlyOnTarget = GetCVar(onlyTargetCVar)
-        end
-    end
 
     -- Data source only; MistUI hides its art. With the "only on target" option off, the 5.4.8
     -- client fills the cast bar of every plate, which the cast bar code detects on the first
     -- cast it sees off target (the older client needed a patched program for that).
-    local shouldForceOn = (cfg.showCastBar ~= false)
-
-    if shouldForceOn then
-        EnsureSaved()
-        NP.module.showVKeyCVarManaged = true
-        if GetCVar(cvar) ~= "1" then
-            SetCVar(cvar, "1")
-        end
-        if GetCVar(onlyTargetCVar) ~= "0" then
-            SetCVar(onlyTargetCVar, "0")
-        end
+    if cfg.showCastBar ~= false then
+        ForceCVar("showVKeyCastbar", "1")
+        ForceCVar("showVKeyCastbarOnlyOnTarget", "0")
         return
     end
 
     -- Restore saved value when auto-forcing no longer applies.
-    if NP.module.showVKeyCVarManaged then
-        E.RestoreShowVKeyCastbarCVars()
-    end
+    RestoreCVar("showVKeyCastbar")
+    RestoreCVar("showVKeyCastbarOnlyOnTarget")
 end
 
-function E.RestoreShowVKeyCastbarCVars()
-    if NP.module.savedShowVKeyCastbar ~= nil then
-        SetCVar("showVKeyCastbar", NP.module.savedShowVKeyCastbar)
-    end
-    if NP.module.savedShowVKeyCastbarOnlyOnTarget ~= nil then
-        SetCVar("showVKeyCastbarOnlyOnTarget", NP.module.savedShowVKeyCastbarOnlyOnTarget)
-    end
-    NP.module.showVKeyCVarManaged = nil
-    NP.module.savedShowVKeyCastbar = nil
-    NP.module.savedShowVKeyCastbarOnlyOnTarget = nil
+function E.RestoreForcedCVars()
+    RestoreCVar("threatWarning")
+    RestoreCVar("ShowClassColorInNameplate")
+    RestoreCVar("showVKeyCastbar")
+    RestoreCVar("showVKeyCastbarOnlyOnTarget")
+    RestoreCVar(MOTION_CVAR)
 end
 
 -- skipStackingCVar: true from the periodic scan tick, since only config-apply and zone-load need to re-run it.
@@ -936,26 +943,7 @@ local function RunNameplatesRestore()
         NP.castbar.Shutdown()
     end
 
-    if NP.module.threatCVarApplied and NP.module.savedThreatWarning and SetCVar then
-        SetCVar("threatWarning", NP.module.savedThreatWarning)
-    end
-    if NP.module.classColorCVarApplied and NP.module.savedShowClassColorInNameplate ~= nil and SetCVar then
-        SetCVar("ShowClassColorInNameplate", NP.module.savedShowClassColorInNameplate)
-    end
-    if NP.module.showVKeyCVarManaged and SetCVar then
-        E.RestoreShowVKeyCastbarCVars()
-    end
-    if NP.module.savedNameplateMotion ~= nil and SetCVar then
-        SetNamePlateMotionType(NP.module.savedNameplateMotion)
-    end
-    NP.module.threatCVarApplied = nil
-    NP.module.savedThreatWarning = nil
-    NP.module.classColorCVarApplied = nil
-    NP.module.savedShowClassColorInNameplate = nil
-    NP.module.showVKeyCVarManaged = nil
-    NP.module.savedShowVKeyCastbar = nil
-    NP.module.savedShowVKeyCastbarOnlyOnTarget = nil
-    NP.module.savedNameplateMotion = nil
+    E.RestoreForcedCVars()
 
     NP.layout.UpdateWorldFrameHeight(false)
     NP.layout.ResetRetailStacking()

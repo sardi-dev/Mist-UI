@@ -15,6 +15,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Name plate settings are given back when the module is off** (2026-11-22)
+  - Summary: The name plate module remembers your own threat, class colour, cast bar and plate overlap settings in the saved variables and restores them when the module is disabled, also after a /reload. The overlap toggle no longer gets undone when Retail-like Stacking is turned off.
+  - Why: After a /reload the forced values were remembered as yours, so disabling the module left them changed. Found in a code audit.
 - **Chat links only for real addresses** (2026-11-22)
   - Summary: Words such as "Mr.Compton" or "ok.item" are no longer turned into links, every address in a line is linked, and colour codes after an address stay intact.
   - Why: False links, broken colours and wasted work on every chat line. Found in a code audit.

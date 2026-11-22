@@ -1420,6 +1420,61 @@ Phase("chat url links", function()
     Expect(item .. " cheap", item .. " cheap")
 end)
 
+-- The CVars the plates force are given back as the user had them, also after a /reload.
+Phase("nameplate cvars", function()
+    local addon = H.namespaces.MistUI
+    local NP = addon.Nameplates
+    local cfg = NP.config.GetCfg()
+    local oldStacking = cfg.retailStackingEnabled
+    local userValues = {
+        threatWarning = "1", ShowClassColorInNameplate = "1", showVKeyCastbar = "0",
+        showVKeyCastbarOnlyOnTarget = "1", nameplateMotion = "1",
+    }
+    local forcedValues = {
+        threatWarning = "3", ShowClassColorInNameplate = "0", showVKeyCastbar = "1",
+        showVKeyCastbarOnlyOnTarget = "0", nameplateMotion = "0",
+    }
+    local function Check(label, expected)
+        for name, value in pairs(expected) do
+            if GetCVar(name) ~= value then
+                H.Report("nameplate cvars", label .. ": " .. name .. " is " .. tostring(GetCVar(name))
+                    .. ", expected " .. value)
+            end
+        end
+    end
+
+    addon:RestoreNameplatesSystem()
+    for name, value in pairs(userValues) do SetCVar(name, value) end
+    cfg.retailStackingEnabled = true
+    addon:ApplyNameplatesSystem()
+    Check("applied", forcedValues)
+
+    -- A /reload forgets everything the module keeps in memory; the live values stay forced.
+    for key in pairs(NP.module) do
+        if key:find("^saved") or key:find("CVarApplied$") or key:find("CVarManaged$") then NP.module[key] = nil end
+    end
+    addon:ApplyNameplatesSystem()
+    Check("after a reload", forcedValues)
+
+    addon:RestoreNameplatesSystem()
+    Check("module disabled", userValues)
+    if next(addon.db.global.nameplateCVarOriginals or {}) then
+        H.Report("nameplate cvars", "the saved originals were not cleared after restoring them")
+    end
+
+    -- A choice made on the overlap toggle while stacking holds the plates overlapping stays.
+    addon:ApplyNameplatesSystem()
+    NP.engine.SetUserNameplateMotion(1)
+    Check("overlap picked while stacking", { nameplateMotion = "0" })
+    cfg.retailStackingEnabled = false
+    NP.engine.SyncRetailStackingCVars()
+    Check("stacking turned off after the pick", { nameplateMotion = "0" })
+
+    addon:RestoreNameplatesSystem()
+    cfg.retailStackingEnabled = oldStacking
+    addon:ApplyNameplatesSystem()
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")

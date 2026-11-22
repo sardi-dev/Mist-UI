@@ -21,6 +21,7 @@ local defaults = {
         questLootLearned = {}, -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
         talentBuilds = {}, -- Saved talent builds per class: [CLASS] = { {name, ranks[tab][index], reqLevel}, ... }
         auraDurations = {}, -- Observed debuff durations for nameplates: [spellId] = seconds
+        nameplateCVarOriginals = {}, -- The user's own values of the CVars the nameplate module forces: [cvar] = value; kept until they are restored
         addonIcons = {}, -- Addon manager icons learned from loaded addons: [lowercase folder] = { icon, coords }
         itemOwnership = { version = 1, realms = {} }, -- Per-realm, per-character item counts for the tooltip module
         versionCheck = {}, -- Newest signed MistUI version seen from other players: update = { version, key, signature }

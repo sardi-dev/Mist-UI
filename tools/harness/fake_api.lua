@@ -142,6 +142,8 @@ GetCVarBool = function(k) return cvars[k] == "1" and 1 or nil end
 GetCVarDefault = function() return "0" end
 SetCVar = function(k, v) cvars[k] = tostring(v) end
 RegisterCVar = function(k, v) cvars[k] = cvars[k] or v end
+-- The client's motion types count from 1; the console variable counts from 0.
+SetNamePlateMotionType = function(motionType) cvars.nameplateMotion = tostring(motionType - 1) end
 
 local units = {
     player = { name = "Tester", class = "Warrior", token = "WARRIOR", classId = 1, level = 90, guid = "0x0000000000000001",

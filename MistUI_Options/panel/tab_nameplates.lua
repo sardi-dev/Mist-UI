@@ -258,11 +258,13 @@ local function BuildGeneralSubTab(scroll)
         label = LO["Allow Nameplate Overlap"],
         desc = LO["Allow native nameplates to overlap. Retail-like Stacking enables this automatically because its custom stacking algorithm requires overlap."],
         -- The client's motion types: 1 lets plates overlap, 2 stacks them (its default).
+        -- Goes through the engine so a pick made while Retail-like Stacking holds the plates
+        -- overlapping is what comes back when stacking is turned off.
         getFunc = function()
-            return GetCVar("nameplateMotion") == "0"
+            return addon.Nameplates.engine.GetUserNameplateMotion() == 1
         end,
         setFunc = function(val)
-            SetNamePlateMotionType(val and 1 or 2)
+            addon.Nameplates.engine.SetUserNameplateMotion(val and 1 or 2)
         end,
     })
 
