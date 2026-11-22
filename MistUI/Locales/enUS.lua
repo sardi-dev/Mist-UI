@@ -274,6 +274,8 @@ L["A merchant window must be open."] = true
 L["Open a merchant window first to sell scrap items."] = true
 L["Sold %d scrap item(s) for %s."] = true
 L["No scrap items to sell."] = true
+L["The merchant window closed before all scrap was sold."] = true
+L["Skipped %d scrap item(s): item details still loading or the slot changed."] = true
 
 -- Guild Bank Sort
 L["You must be at the guild bank."] = true

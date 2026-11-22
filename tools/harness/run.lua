@@ -402,6 +402,132 @@ Phase("bag currency strip", function()
     GetBackpackCurrencyInfo = savedInfo
 end)
 
+-- A small fake bag set for the bag audit checks below; the original functions come back afterwards.
+local BAG_FAKE_NAMES = {
+    "GetContainerNumSlots", "GetContainerItemID", "GetContainerItemLink", "GetContainerItemInfo",
+    "GetContainerItemQuestInfo", "GetItemInfo", "UseContainerItem",
+}
+local function InstallBagFake(sizes, grid, facts)
+    local saved = {}
+    for _, name in ipairs(BAG_FAKE_NAMES) do saved[name] = _G[name] end
+    local function Entry(bag, slot) return grid[bag] and grid[bag][slot] end
+    _G.GetContainerNumSlots = function(bag) return sizes[bag] or 0 end
+    _G.GetContainerItemID = function(bag, slot)
+        local entry = Entry(bag, slot)
+        return entry and entry.id
+    end
+    _G.GetContainerItemLink = function(bag, slot)
+        local entry = Entry(bag, slot)
+        return entry and ("|cffffffff|Hitem:" .. entry.id .. ":0:0:0:0:0:0:0:90:0|h[Item " .. entry.id .. "]|h|r")
+    end
+    _G.GetContainerItemInfo = function(bag, slot)
+        local entry = Entry(bag, slot)
+        if not entry then return nil end
+        return "Interface\Icons\INV_Misc_QuestionMark", entry.count, entry.locked, entry.slotQuality or 1, nil, nil,
+            _G.GetContainerItemLink(bag, slot)
+    end
+    _G.GetContainerItemQuestInfo = function() return nil end
+    _G.GetItemInfo = function(item)
+        local id = tonumber(item) or tonumber(tostring(item):match("item:(%d+)"))
+        local f = facts[id]
+        if not f or (f.cachedAt and H.now < f.cachedAt) then return nil end
+        return f.name or ("Item " .. id), nil, f.quality, f.level or 10, 1, f.class or "Miscellaneous",
+            f.subclass or "Junk", f.stack or 1, f.equip or "", "Interface\Icons\INV_Misc_QuestionMark", f.price
+    end
+    return function()
+        for _, name in ipairs(BAG_FAKE_NAMES) do _G[name] = saved[name] end
+    end
+end
+
+Phase("bag scrap selling", function()
+    local addon = H.namespaces.MistUI
+    local function Check(condition, message)
+        if not condition then H.Report("bag scrap selling", message) end
+    end
+    local button = _G.MistUI_BagsterBagSellScrapBtn
+    if not button then
+        H.Report("bag scrap selling", "the sell scrap button is not there")
+        return
+    end
+
+    local FANG, SPIDER_EYE, LATE_FANG, PLATE = 400, 401, 402, 500
+    local facts = {
+        [FANG] = { quality = 0, price = 5 },
+        [SPIDER_EYE] = { cachedAt = math.huge, quality = 0, price = 3 },
+        [LATE_FANG] = { cachedAt = H.now + 0.5, quality = 0, price = 7 },
+        [PLATE] = { quality = 2, price = 90 },
+    }
+    local grid
+    local function Refill()
+        grid = { [0] = {}, [1] = {} }
+        for slot = 1, 8 do grid[0][slot] = { id = FANG, count = 2 } end
+        grid[1][1] = { id = SPIDER_EYE, count = 1, slotQuality = 0 }
+        grid[1][2] = { id = LATE_FANG, count = 1, slotQuality = 0 }
+        grid[1][3] = { id = PLATE, count = 1 }
+    end
+    Refill()
+    local restore = InstallBagFake({ [0] = 8, [1] = 6 }, grid, facts)
+    local sold = {}
+    _G.UseContainerItem = function(bag, slot)
+        sold[#sold + 1] = bag .. ":" .. slot
+        grid[bag][slot] = nil
+    end
+    local merchantOpen = true
+    local savedMerchant = _G.MerchantFrame
+    _G.MerchantFrame = { IsShown = function() return merchantOpen end }
+    local saidLines = {}
+    local savedPrint = _G.print
+    _G.print = function(text) saidLines[#saidLines + 1] = tostring(text) end
+    local function Said(fragment)
+        for _, line in ipairs(saidLines) do
+            if line:find(fragment, 1, true) then return true end
+        end
+        return false
+    end
+    local config = addon:GetModuleConfig("bagsort")
+    local savedLocks = config.lockedSlots
+    config.lockedSlots = { ["0:3"] = true }
+
+    -- The sale is spread over ticks: no flood of sell requests in one frame
+    H.FireScript(button, "OnClick")
+    H.Tick(0.15, 0.05)
+    Check(#sold > 0 and #sold <= 3, "expected 1 to 3 sold in the first tick, got " .. #sold)
+    H.Tick(5, 0.1)
+    local soldSet = {}
+    for _, key in ipairs(sold) do soldSet[key] = true end
+    Check(not soldSet["0:3"], "a sort-locked slot was sold")
+    Check(soldSet["0:1"] and soldSet["0:8"], "the gray stacks were not all sold")
+    Check(not soldSet["1:3"], "a non-gray item was sold")
+    Check(soldSet["1:2"], "an item whose details arrived late was not sold on the retry")
+    Check(not soldSet["1:1"], "an item with unknown details was sold")
+    Check(Said("Sold 8 scrap"), "the sold count was not reported: " .. table.concat(saidLines, " | "))
+    Check(Said("Skipped 1"), "the item with unknown details was not reported as skipped")
+
+    -- The merchant closing stops the sale
+    Refill()
+    config.lockedSlots = {}
+    sold, saidLines = {}, {}
+    H.FireScript(button, "OnClick")
+    H.Tick(0.15, 0.05)
+    merchantOpen = false
+    local soldWhenClosed = #sold
+    H.Tick(5, 0.1)
+    Check(#sold == soldWhenClosed, "scrap was sold after the merchant window closed")
+    Check(soldWhenClosed < 8, "the whole sale ran in the first tick: " .. soldWhenClosed)
+    Check(Said("closed before all scrap"), "closing the merchant window was not reported")
+    -- A new sale can start afterwards
+    merchantOpen = true
+    sold = {}
+    H.FireScript(button, "OnClick")
+    H.Tick(5, 0.1)
+    Check(#sold > 0, "a sale after an interrupted one did not start")
+
+    config.lockedSlots = savedLocks
+    _G.print = savedPrint
+    _G.MerchantFrame = savedMerchant
+    restore()
+end)
+
 Phase("guild bank", function()
     H.state.guildTabs = 2
     H.Fire("PLAYER_GUILD_UPDATE")

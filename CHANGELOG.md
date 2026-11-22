@@ -27,6 +27,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Sell Scrap sells in steps and respects locked slots** (2026-11-22)
+  - Summary: The Sell Scrap button now sells a few stacks at a time, leaves
+  - Why: Selling everything in one frame could disconnect you on a full bag
 - **Name plate settings are given back when the module is off** (2026-11-22)
   - Summary: The name plate module remembers your own threat, class colour, cast bar and plate overlap settings in the saved variables and restores them when the module is disabled, also after a /reload. The overlap toggle no longer gets undone when Retail-like Stacking is turned off.
   - Why: After a /reload the forced values were remembered as yours, so disabling the module left them changed. Found in a code audit.

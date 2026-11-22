@@ -1227,36 +1227,121 @@ local function FormatMoney(copper)
     end
 end
 
-local function SellScrapItems()
-    if not MerchantFrame or not MerchantFrame:IsShown() then
-        print("|cffff9900MistUI|r: " .. T("Open a merchant window first to sell scrap items.", "Open a merchant window first to sell scrap items."))
-        return
-    end
+-- Scrap goes to the vendor a few stacks per tick, like the sort moves, so a full bag does not flood the server.
+local SCRAP_RETRY_DELAY = 1
+local scrapRun
+local scrapDriver = CreateFrame("Frame")
+scrapDriver:Hide()
+local scrapElapsed = 0
 
-    local soldCount = 0
-    local totalValue = 0
+local function PrintScrap(text)
+    print("|cffff9900MistUI|r: " .. text)
+end
 
-    for bag = 0, 4 do
+-- The poor-quality flag is in the slot itself, so an item the client has not cached yet still shows up;
+-- only its vendor price is missing, and those wait for a retry.
+local function ScanScrap(run)
+    for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
         for slot = 1, GetContainerNumSlots(bag) do
             local itemID = GetContainerItemID(bag, slot)
-            if itemID then
+            if itemID and not IsSlotLocked(bag, slot) and not GetContainerItemQuestInfo(bag, slot) then
                 local _, _, quality, _, _, _, _, _, _, _, sellPrice = GetItemInfo(itemID)
-                local isQuestItem = GetContainerItemQuestInfo(bag, slot)
-                if quality == 0 and not isQuestItem and sellPrice and sellPrice > 0 then
-                    local stackCount = select(2, GetContainerItemInfo(bag, slot)) or 1
-                    UseContainerItem(bag, slot)
-                    soldCount = soldCount + 1
-                    totalValue = totalValue + (sellPrice * stackCount)
+                local slotQuality = select(4, GetContainerItemInfo(bag, slot))
+                if (quality or slotQuality) == 0 then
+                    local entry = { bag = bag, slot = slot, item = itemID }
+                    if sellPrice == nil then
+                        run.deferred[#run.deferred + 1] = entry
+                    elseif sellPrice > 0 then
+                        entry.price = sellPrice
+                        run.queue[#run.queue + 1] = entry
+                    end
                 end
             end
         end
     end
+end
 
-    if soldCount > 0 then
-        print("|cffff9900MistUI|r: " .. string.format(T("Sold %d scrap item(s) for %s.", "Sold %d scrap item(s) for %s."), soldCount, FormatMoney(totalValue)))
-    else
-        print("|cffff9900MistUI|r: " .. T("No scrap items to sell.", "No scrap items to sell."))
+local function FinishScrapSale(run, merchantClosed)
+    scrapRun = nil
+    scrapDriver:Hide()
+    local skipped = run.skipped + #run.deferred
+    if run.sold > 0 then
+        PrintScrap(string.format(T("Sold %d scrap item(s) for %s.", "Sold %d scrap item(s) for %s."), run.sold, FormatMoney(run.value)))
+    elseif skipped == 0 then
+        PrintScrap(T("No scrap items to sell.", "No scrap items to sell."))
     end
+    if merchantClosed then
+        PrintScrap(T("The merchant window closed before all scrap was sold.", "The merchant window closed before all scrap was sold."))
+    end
+    if skipped > 0 then
+        PrintScrap(string.format(T("Skipped %d scrap item(s): item details still loading or the slot changed.", "Skipped %d scrap item(s): item details still loading or the slot changed."), skipped))
+    end
+end
+
+-- Items whose details arrived since the scan join the queue; the rest are reported as skipped.
+local function RetryDeferredScrap(run)
+    run.retried = true
+    local stillUnknown = {}
+    for _, entry in ipairs(run.deferred) do
+        local sellPrice = select(11, GetItemInfo(entry.item))
+        if sellPrice == nil then
+            stillUnknown[#stillUnknown + 1] = entry
+        elseif sellPrice > 0 then
+            entry.price = sellPrice
+            run.queue[#run.queue + 1] = entry
+        end
+    end
+    run.deferred = stillUnknown
+end
+
+local function SellNextScrap(run)
+    for _ = 1, MAX_MOVES_PER_TICK do
+        local entry = run.queue[run.next]
+        if not entry then return end
+        run.next = run.next + 1
+        local _, count, busy = GetContainerItemInfo(entry.bag, entry.slot)
+        -- A lock set or an item moved after the scan must not lose the player's item.
+        if GetContainerItemID(entry.bag, entry.slot) ~= entry.item or IsSlotLocked(entry.bag, entry.slot) or busy then
+            run.skipped = run.skipped + 1
+        else
+            UseContainerItem(entry.bag, entry.slot)
+            run.sold = run.sold + 1
+            run.value = run.value + entry.price * (count or 1)
+        end
+    end
+end
+
+scrapDriver:SetScript("OnUpdate", function(_, elapsed)
+    scrapElapsed = scrapElapsed + elapsed
+    if scrapElapsed < GetSortMoveInterval() then return end
+    scrapElapsed = 0
+    local run = scrapRun
+    local waitingForRetry = #run.deferred > 0 and not run.retried
+    local workLeft = run.queue[run.next] ~= nil or waitingForRetry
+    if workLeft and not (MerchantFrame and MerchantFrame:IsShown()) then
+        FinishScrapSale(run, true)
+    elseif run.queue[run.next] then
+        SellNextScrap(run)
+    elseif waitingForRetry then
+        if GetTime() - run.startedAt >= SCRAP_RETRY_DELAY then
+            RetryDeferredScrap(run)
+        end
+    else
+        FinishScrapSale(run)
+    end
+end)
+
+local function SellScrapItems()
+    if not MerchantFrame or not MerchantFrame:IsShown() then
+        PrintScrap(T("Open a merchant window first to sell scrap items.", "Open a merchant window first to sell scrap items."))
+        return
+    end
+    if scrapRun then return end
+
+    scrapRun = { queue = {}, deferred = {}, next = 1, sold = 0, skipped = 0, value = 0, startedAt = GetTime() }
+    ScanScrap(scrapRun)
+    scrapElapsed = 0
+    scrapDriver:Show()
 end
 
 local function CreateSellScrapButton(name, parent, scale)
