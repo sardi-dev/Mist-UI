@@ -1159,7 +1159,7 @@ local function ReplaceStockFrame(frame)
 end -- End of ReplaceStockFrame function
 
 local function CreateMinimapBorderFrame(width, height)
-    local minimapBorderFrame = CreateFrame('Frame', UIParent)
+    local minimapBorderFrame = CreateFrame('Frame', nil, UIParent)
     minimapBorderFrame:SetSize(width, height)
     minimapBorderFrame._mistUIHeavyUpdateElapsed = 0
     minimapBorderFrame:SetScript("OnUpdate", function(self, elapsed)

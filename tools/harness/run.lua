@@ -1367,6 +1367,16 @@ Phase("nameplate rare icon", function()
     end
 end)
 
+-- The minimap border frame is a child of UIParent, so it hides with the rest of the interface.
+Phase("minimap border frame", function()
+    local border = H.namespaces.MistUI.MinimapModule.borderFrame
+    if not border then
+        H.Report("minimap border frame", "the minimap border frame was not created")
+    elseif border:GetParent() ~= UIParent then
+        H.Report("minimap border frame", "the border frame has no UIParent parent")
+    end
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")

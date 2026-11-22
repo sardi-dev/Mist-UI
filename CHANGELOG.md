@@ -15,6 +15,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Minimap border frame hides with the interface** (2026-11-22)
+  - Summary: The helper frame behind the minimap border now belongs to the interface parent, so hiding the interface with Alt+Z hides it too.
+  - Why: It had no parent because of a wrong argument order. Found in a code audit.
 - **Layout strings are checked before they are imported** (2026-11-22)
   - Summary: An imported layout string (and a saved layout preset) is applied only if every setting in it is a known position field with the right kind of value; otherwise nothing changes and the message names the first setting that is wrong.
   - Why: A layout string can come from anyone. An edited or broken one could write unknown entries or wrong values into the settings, half-apply, or raise an error. Found in a code audit; a harness check now covers it.
