@@ -85,6 +85,7 @@ function NP.lifecycle.PrepareNameplate(plateData)
     plateData._shownAt = now
     plateData._levelSettleAt = now + (NP.const and NP.const.LEVEL_TEXT_SETTLE or 0.15)
     plateData._lastDirectHover = nil
+    plateData._bossLookupUntil = nil
     plateData._layoutSig = nil
     plateData._lastAppliedVisualAlpha = nil
     -- Reset rendering-guard caches so a recycled plate doesn't inherit stale values.

@@ -541,18 +541,35 @@ end
 -- bossIcon IsShown() marks true worldboss (UnitClassification == "worldboss") only.
 -- This client has no separate dungeon-boss class; elite trash must not clamp as boss.
 -- Boss detect: native bossIcon IsShown() and/or UnitLevel == -1 (independent of level display).
+-- The unit lookup behind the boss test ran for every plate every frame. Its answer is kept this long;
+-- a new show of the plate and a change of its target, focus or mouseover state refresh it sooner.
+local BOSS_LOOKUP_SECONDS = 0.25
+
+local function BossLookupKey(plateData)
+    local identity = NP.identity
+    return (identity.IsTargetPlate(plateData) and 1 or 0)
+        + (identity.IsFocusPlate(plateData) and 2 or 0)
+        + (identity.IsMouseoverPlate(plateData) and 4 or 0)
+end
+
 function NP.layout.PlateHasBossIcon(plateData)
     if not plateData then return false end
     local icon = plateData.bossIcon
     if icon and icon.IsShown and icon:IsShown() then
         return true
     end
+    local now = GetTime()
+    local key = BossLookupKey(plateData)
+    if plateData._bossLookupKey == key and plateData._bossLookupUntil and now < plateData._bossLookupUntil then
+        return plateData._bossLookup
+    end
     local unit = NP.identity and NP.identity.ResolvePlateCastUnit
         and NP.identity.ResolvePlateCastUnit(plateData)
-    if unit and UnitExists(unit) and NP.native_style.IsBossLevel(UnitLevel(unit)) then
-        return true
-    end
-    return false
+    local isBoss = unit and UnitExists(unit) and NP.native_style.IsBossLevel(UnitLevel(unit)) or false
+    plateData._bossLookupKey = key
+    plateData._bossLookupUntil = now + BOSS_LOOKUP_SECONDS
+    plateData._bossLookup = isBoss
+    return isBoss
 end
 
 local function PlateWantsClamp(plateData)

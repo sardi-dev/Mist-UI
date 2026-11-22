@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Boss clamp checks name plates less often** (2026-11-22)
+  - Summary: With the boss clamp option on, the check for a boss name plate is reused for a short time instead of being repeated every frame.
+  - Why: It did unit lookups for every enemy plate on every frame. Found in a code audit.
 - **Name plates reset once per show** (2026-11-22)
   - Summary: A name plate that appears or disappears is now reset and cleaned up once instead of twice.
   - Why: The duplicate work ran for every plate that came on screen. Found in a code audit.

@@ -1520,6 +1520,84 @@ Phase("nameplate show hooks", function()
     NP.lifecycle.PrepareNameplate, NP.identity.InvalidatePlate = prepare, invalidate
 end)
 
+-- With boss clamp on, the unit lookup behind the boss test is not repeated for every plate every frame,
+-- and a boss target is still found right after the target changes.
+Phase("nameplate boss clamp cache", function()
+    local NP = H.namespaces.MistUI.Nameplates
+    local cfg = NP.config.GetCfg()
+    local oldClamp = cfg.clampBoss
+    cfg.clampBoss = true
+    NP.engine.SyncConfigSnapshot()
+    local enemies = {}
+    for _, plateData in pairs(NP.module.plates) do
+        if plateData.plate:IsShown() and NP.native_style.GetPlateReaction(plateData) ~= "FRIENDLY" then
+            enemies[#enemies + 1] = plateData
+        end
+    end
+    if #enemies == 0 then
+        H.Report("nameplate boss clamp cache", "no enemy plate was on screen to test with")
+        cfg.clampBoss = oldClamp
+        return
+    end
+
+    -- The native skull is what marks a worldboss; with it hidden the lookup is the only test left.
+    local hiddenSkulls = {}
+    for _, plateData in ipairs(enemies) do
+        if plateData.bossIcon and plateData.bossIcon:IsShown() then
+            plateData.bossIcon:Hide()
+            hiddenSkulls[#hiddenSkulls + 1] = plateData.bossIcon
+        end
+    end
+
+    local lookups = 0
+    local resolve = NP.identity.ResolvePlateCastUnit
+    NP.identity.ResolvePlateCastUnit = function(...)
+        -- Other parts of the plates resolve units too; only the layout's calls are counted.
+        if debug.getinfo(2, "S").source:find("layout.lua", 1, true) then lookups = lookups + 1 end
+        return resolve(...)
+    end
+    local frames = 40
+    H.Tick(frames * 0.05, 0.05)
+    local perPlate = lookups / #enemies
+    print(("Boss clamp unit lookups per enemy plate over %d frames: %.1f"):format(frames, perPlate))
+    if perPlate > frames / 4 then
+        H.Report("nameplate boss clamp cache", ("%.1f unit lookups per plate over %d frames"):format(perPlate, frames))
+    end
+
+    -- A boss becomes the target: the plate clamps without waiting for a refresh interval.
+    local data = enemies[1]
+    local name = data.plateName
+    local function Target(level)
+        units.target = { name = name, class = "Warrior", token = "WARRIOR", classId = 1, level = level,
+            guid = "0xF1307A1800005678", health = 800, healthMax = 1000, power = 0, powerMax = 0, powerType = 1,
+            powerToken = "RAGE" }
+        for _, other in ipairs(enemies) do other.plate.__alpha = (other == data) and 1 or 0.5 end
+        H.Fire("PLAYER_TARGET_CHANGED")
+        H.Tick(0.05, 0.05)
+    end
+    Target(-1)
+    if not NP.layout.PlateHasBossIcon(data) then
+        H.Report("nameplate boss clamp cache", "a boss target was not found as a boss")
+    end
+    units.target = nil
+    H.Fire("PLAYER_TARGET_CHANGED")
+    H.Tick(0.05, 0.05)
+    if NP.layout.PlateHasBossIcon(data) then
+        H.Report("nameplate boss clamp cache", "a plate that lost its boss target was still found as a boss")
+    end
+    Target(92)
+    H.Tick(0.5, 0.05)
+    if NP.layout.PlateHasBossIcon(data) then
+        H.Report("nameplate boss clamp cache", "a normal target was found as a boss")
+    end
+    units.target = nil
+    H.Fire("PLAYER_TARGET_CHANGED")
+    NP.identity.ResolvePlateCastUnit = resolve
+    for _, skull in ipairs(hiddenSkulls) do skull:Show() end
+    cfg.clampBoss = oldClamp
+    NP.engine.SyncConfigSnapshot()
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")
