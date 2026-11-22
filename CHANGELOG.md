@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **Combat visibility is right after a /reload in combat** (2026-11-22)
+  - Summary: Parts set to show only in combat, or to hide in combat, now start in the right state when the interface loads during a fight.
+  - Why: They assumed "not in combat" until the next fight started, so after a /reload mid-fight a show-in-combat bar stayed hidden and a hide-in-combat bar stayed visible. Found in a code audit; a harness check now covers it.
 - **Action buttons no longer taint the stock button code** (2026-11-22)
   - Summary: The setting that keeps empty main bar slots visible is now written by secure code instead of addon code, and a settings refresh restyles the buttons itself instead of running the game's own button update.
   - Why: The game's button update reads that setting in combat (page and stance changes), so a value written by the addon could block its later actions with "action blocked". Found in a code audit; a harness check now covers it. Needs an in-game check that empty main bar slots still show as before.

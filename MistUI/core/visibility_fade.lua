@@ -271,7 +271,8 @@ function VF.Register(key, frame, opts)
 
     local entry = registry[key]
     if not entry then
-        entry = { state = { hovered = false, inCombat = false } }
+        -- Seeded from the client: after a /reload in combat no PLAYER_REGEN_DISABLED comes.
+        entry = { state = { hovered = false, inCombat = InCombatLockdown() and true or false } }
         registry[key] = entry
     end
 

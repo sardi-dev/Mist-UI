@@ -1129,6 +1129,24 @@ Phase("action buttons stay untainted", function()
     end
 end)
 
+-- A bar set to show only in combat, registered in combat (a /reload mid-fight), shows at once.
+Phase("combat fade after a reload in combat", function()
+    local VF = H.namespaces.MistUI.VisibilityFade
+    local bar = CreateFrame("Frame", "HarnessFadeBar", UIParent)
+    bar:SetAlpha(0)
+    local config = { show_in_combat = true, visibility_fade_in = 0, visibility_fade_out = 0 }
+    H.inCombat = true
+    VF.Register("harness_fade", bar, { dbTable = function() return config end, enableMouse = false })
+    VF.Update("harness_fade")
+    H.Tick(1)
+    if bar:GetAlpha() < 0.99 then
+        H.Report("combat fade after a reload in combat", "a show-in-combat bar stayed hidden, alpha " .. bar:GetAlpha())
+    end
+    H.inCombat = false
+    VF.Unregister("harness_fade")
+    bar:Hide()
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI
