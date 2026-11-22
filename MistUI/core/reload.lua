@@ -133,10 +133,6 @@ function Reload.Get(path, scope)
     return Saved(path, scope)
 end
 
-function Reload.IsStaged(path, scope)
-    return staged[ProfileKey(path, scope)] ~= nil
-end
-
 local function Running(name)
     local registry = addon.ModuleRegistry
     return registry and registry:IsEnabled(name) and true or false
@@ -173,10 +169,6 @@ end
 
 function Reload.HasStaged()
     return next(staged) ~= nil
-end
-
-function Reload.Discard()
-    Clear()
 end
 
 function Reload.OnDiscard(fn)

@@ -43,6 +43,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Summary: The cast bars listen to the combat log only while a cast bar that names the interrupter is on.
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
+### Removed
+- **Removed unused core code** (2026-11-22)
+  - Summary: Removed core helper functions, fallbacks and settings that nothing used any more.
+  - Why: A code audit found them with no callers, so they only made the core harder to read.
+
 ### Fixed
 - **Sort lock icons hide when Bag Sort is off** (2026-11-22)
   - Summary: The padlock icons on locked bag slots are now only shown while

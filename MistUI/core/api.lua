@@ -65,8 +65,8 @@ local function ApplyMissingDefaults(source, target)
     end
 end
 
--- Register unit-filtered events when the client supports them; otherwise fall
--- back to RegisterEvent and filter by unit in the handler.
+-- Register unit-filtered events for the given units; with no unit token it falls
+-- back to RegisterEvent, and the handler filters by unit.
 function addon.RegisterUnitEventSafe(frame, eventName, ...)
     if not frame or not eventName then
         return false
@@ -80,7 +80,7 @@ function addon.RegisterUnitEventSafe(frame, eventName, ...)
         end
     end
 
-    if type(frame.RegisterUnitEvent) == "function" and hasUnitToken then
+    if hasUnitToken then
         return frame:RegisterUnitEvent(eventName, ...)
     end
 
@@ -625,53 +625,6 @@ function addon.GetAnchorOffset(frame, point, relativePoint)
     return fx - ux * ratio, fy - uy * ratio
 end
 
--- Apply frame position from database
-function addon.ApplyUIFramePosition(frame, configPath)
-    if not frame or not configPath then
-        return
-    end
-
-    local section, key = configPath:match("([^%.]+)%.([^%.]+)")
-    if not section or not key then
-        return
-    end
-
-    local config = addon.db.profile[section] and addon.db.profile[section][key]
-    if not config or not config.override then
-        return
-    end
-
-    frame:ClearAllPoints()
-    frame:SetPoint(config.anchor or "CENTER", UIParent, config.anchorParent or "CENTER", config.x or 0, config.y or 0)
-end
-
--- ============================================================================
--- SETTINGS VALIDATION
--- ============================================================================
-
--- Check if settings exist and load defaults if needed
-function addon.CheckSettingsExists(moduleTable, configPaths)
-    local needsDefaults = false
-
-    for _, configPath in pairs(configPaths) do
-        local section, key = configPath:match("([^%.]+)%.([^%.]+)")
-        if section and key then
-            if not addon.db.profile[section] or not addon.db.profile[section][key] then
-                needsDefaults = true
-                break
-            end
-        end
-    end
-
-    if needsDefaults and moduleTable.LoadDefaultSettings then
-        moduleTable:LoadDefaultSettings()
-    end
-
-    if moduleTable.UpdateWidgets then
-        moduleTable:UpdateWidgets()
-    end
-end
-
 -- ============================================================================
 -- EDITABLE FRAMES REGISTRY
 -- Centralized system for managing moveable UI elements
@@ -961,12 +914,6 @@ function MR:GetAll()
     return self.loadOrder
 end
 
--- Get count of registered modules
--- @return number
-function MR:Count()
-    return #self.loadOrder
-end
-
 -- Check if a module is enabled in database
 -- @param name: Module identifier
 -- @return boolean
@@ -1037,21 +984,13 @@ function addon:SetModuleEnabled(name, enable)
     end)
 end
 
-addon._pendingReloadModules = addon._pendingReloadModules or {}
-
 function addon:ShouldDeferModuleDisable(name, moduleState)
-    local L = addon.L
-
     if not self:IsModuleLoadOnce(name) then
         return false
     end
 
     if not moduleState or not (moduleState.initialized or moduleState.applied) then
         return false
-    end
-
-    if not self._pendingReloadModules[name] then
-        self._pendingReloadModules[name] = true
     end
 
     return true
@@ -1129,78 +1068,6 @@ function MR:RefreshAll()
     return failed
 end
 
--- Enable a specific module
--- @param name: Module identifier
--- @return boolean success
-function MR:Enable(name)
-    local L = addon.L
-
-    local info = self.modules[name]
-    if not info then
-        addon:Error(L["ModuleRegistry: Unknown module -"], name)
-        return false
-    end
-    
-    -- Update database
-    if addon.db and addon.db.profile and addon.db.profile.modules then
-        if not addon.db.profile.modules[name] then
-            addon.db.profile.modules[name] = {}
-        end
-        addon.db.profile.modules[name].enabled = true
-    end
-    
-    self:Refresh(name)
-    
-    addon:Debug(L["ModuleRegistry: Enabled -"], name)
-    return true
-end
-
--- Disable a specific module
--- @param name: Module identifier
--- @return boolean success
-function MR:Disable(name)
-    local L = addon.L
-
-    local info = self.modules[name]
-    if not info then
-        addon:Error(L["ModuleRegistry: Unknown module -"], name)
-        return false
-    end
-    
-    -- Update database
-    if addon.db and addon.db.profile and addon.db.profile.modules then
-        if not addon.db.profile.modules[name] then
-            addon.db.profile.modules[name] = {}
-        end
-        addon.db.profile.modules[name].enabled = false
-    end
-    
-    -- hooksecurefunc / HookScript registrations are permanent for the session.
-    -- Keep load-once modules active until reload instead of pretending we can fully disable them.
-    if not info.liveDisable and info.module and (info.module.initialized or info.module.applied) then
-        return true
-    end
-
-    self:Refresh(name)
-    
-    addon:Debug(L["ModuleRegistry: Disabled -"], name)
-    return true
-end
-
--- Enable all registered modules (in load order)
-function MR:EnableAll()
-    for _, name in ipairs(self.loadOrder) do
-        self:Enable(name)
-    end
-end
-
--- Disable all registered modules (in reverse load order for proper cleanup)
-function MR:DisableAll()
-    for i = #self.loadOrder, 1, -1 do
-        self:Disable(self.loadOrder[i])
-    end
-end
-
 -- Print status of all registered modules (for /mistui status)
 function MR:PrintStatus()
     local L = addon.L
@@ -1229,12 +1096,6 @@ end
 -- @param description: Description (optional)
 function addon:RegisterModule(name, moduleTable, displayName, description, options)
     return MR:Register(name, moduleTable, displayName, description, options)
-end
-
--- No external callers: DEFAULT_LEGACY_REFRESH_TARGETS covers the frames that need it. Kept as the
--- supported way to add one without editing this file.
-function addon:RegisterLegacyRefreshTarget(name, funcName, order)
-    return MR:RegisterLegacyRefreshTarget(name, funcName, order)
 end
 
 function addon:RefreshRegisteredSystems()
@@ -1600,19 +1461,6 @@ inspectEventFrame:SetScript("OnEvent", function(_, _, guid)
         FireInspectCallbacks()
     end
 end)
-
-function addon:SafeSetAtlas(texture, atlasName, useAtlasSize)
-    if not texture or not atlasName then
-        return false
-    end
-
-    if texture.SetAtlasTexture then
-        local ok = pcall(texture.SetAtlasTexture, texture, atlasName, useAtlasSize)
-        return ok
-    end
-
-    return false
-end
 
 function addon:SafeSetTexture(texture, path, fallback)
     if not texture then

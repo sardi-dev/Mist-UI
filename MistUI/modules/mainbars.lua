@@ -138,7 +138,7 @@ local function Layout(bar)
         shown = shown,
         columns = columns,
         rows = math.ceil(shown / columns),
-        spacing = tonumber(config.button_spacing) or tonumber(settings.button_spacing) or DEFAULT_SPACING,
+        spacing = tonumber(config.button_spacing) or DEFAULT_SPACING,
         order = order,
         scale = tonumber(settings[bar.scale]) or DEFAULT_SCALE,
     }

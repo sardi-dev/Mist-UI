@@ -15,7 +15,6 @@ local floor = math.floor
 local function Locked()
     return InCombatLockdown() and true or false
 end
-E.IsLocked = Locked
 
 local function EditorActive()
     local mode = addon.EditorMode
@@ -749,57 +748,6 @@ function E.Get(first, second)
     return frameName and E.frames[frameName]
 end
 
--- ============================================================================
--- RELOAD-ONLY SETTINGS (staged in addon.Reload, saved only by its "Reload Now")
--- ============================================================================
-
--- True while a change to this setting waits for a reload; its dependent rows stay frozen until then.
-function E.IsReloadPending(path)
-    return addon.Reload.IsStaged(path)
-end
-
--- `extraPaths` mirror the value and are staged only while the main one is.
-local function ReloadSet(path, o)
-    return function(value)
-        addon.Reload.Stage(path, value)
-        if o.extraPaths then
-            local staged = addon.Reload.IsStaged(path)
-            for i = 1, #o.extraPaths do
-                local extra = o.extraPaths[i]
-                addon.Reload.Stage(extra, staged and value or GetDB(extra))
-            end
-        end
-        E.Rebuild()
-    end
-end
-
-local function ReloadCheck(labelKey, path, o)
-    o = o or {}
-    return Check(labelKey, path, nil, { set = ReloadSet(path, o), hidden = o.hidden, disabled = o.disabled,
-        tooltip = o.tooltip, get = function() return addon.Reload.Get(path) and true or false end })
-end
-
-local function ReloadDrop(labelKey, path, list, o)
-    o = o or {}
-    return Drop(labelKey, path, list, nil, { set = ReloadSet(path, o), hidden = o.hidden, disabled = o.disabled,
-        get = function() return addon.Reload.Get(path) end })
-end
-
--- Same rule as the Options toggle: live when the module can switch now, staged for a reload otherwise.
-local function ModuleCheck(labelKey, name, o)
-    o = o or {}
-    return Check(labelKey, "modules." .. name .. ".enabled", nil, {
-        hidden = o.hidden,
-        disabled = o.disabled,
-        tooltip = o.tooltip,
-        get = function() return addon.Reload.ModuleState(name) end,
-        set = function(value)
-            E.Flush()
-            if addon:SetModuleEnabled(name, value) and o.onLive then o.onLive(value) end
-            E.Rebuild()
-        end })
-end
-
 local function Append(frameName, ...)
     local def = E.Get(frameName)
     if not def then return end
@@ -1170,7 +1118,7 @@ local function BarSettings(barKey, scaleKey)
             get = function()
                 local bars = GetDB("mainbars")
                 local cfg = bars and bars[barKey]
-                return (cfg and cfg.button_spacing) or (bars and bars.button_spacing) or 7
+                return (cfg and cfg.button_spacing) or 7
             end }),
         Section(T("Layout"), true),
         Check(T("Change Button Order"), prefix .. ".change_button_order", R.bars, {
@@ -1307,7 +1255,6 @@ E.Register("stance", { settings = {
     Check(T("Show Hotkey Text"), "additional.stance.show_hotkey", R.hotkeys),
 } })
 
--- The totem bar falls back to the shared additional.size/spacing, like its Options sliders.
 -- ============================================================================
 -- DEFINITIONS: MINIMAP, AURAS, TOOLTIP, QUEST TRACKER, LFG EYE
 -- ============================================================================

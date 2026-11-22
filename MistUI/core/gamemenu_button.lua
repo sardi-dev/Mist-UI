@@ -52,4 +52,3 @@ local function PlaceButton(menu)
 end
 
 hooksecurefunc("GameMenuFrame_UpdateVisibleButtons", PlaceButton)
-addon.GameMenuButton = { Place = PlaceButton }

@@ -1590,21 +1590,3 @@ function addon:HideAllEditableFrames(refresh)
     end
     addon:Print((L and L["All editable frames hidden, positions saved"] or "All editable frames hidden, positions saved"))
 end
-
--- Check if a frame should be visible
-function addon:ShouldFrameBeVisible(frameName)
-    local frameData = self.EditableFrames[frameName]
-    if not frameData then return false end
-
-    if frameData.hasTarget then
-        return frameData.hasTarget()
-    end
-
-    -- By default, frames are always visible (player, minimap)
-    return true
-end
-
--- Get information about a registered frame
-function addon:GetEditableFrameInfo(frameName)
-    return self.EditableFrames[frameName]
-end

@@ -514,7 +514,7 @@ local function BuildLayoutTab(scroll)
         getFunc = function()
             local mb = addon.db.profile.mainbars
             local cfg = mb and mb[selectedSpacingBar]
-            return (cfg and cfg.button_spacing) or (mb and mb.button_spacing) or 7
+            return (cfg and cfg.button_spacing) or 7
         end,
         setFunc = function(val)
             local mb = addon.db.profile.mainbars

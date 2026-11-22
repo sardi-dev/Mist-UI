@@ -59,33 +59,8 @@ end
 local function ShowStatus()
     addon:Print(L["=== MistUI Status ==="])
     
-    -- Show registered modules from ModuleRegistry (if available)
-    if addon.ModuleRegistry and addon.ModuleRegistry.Count and addon.ModuleRegistry:Count() > 0 then
-        addon.ModuleRegistry:PrintStatus()
-    else
-        -- Fallback: Show manually detected modules
-        print("  |cFF00FF00" .. L["Detected Modules:"] .. "|r")
-        local modules = {
-            { name = L["Main Bars"], check = function() return addon.RefreshMainbars end },
-            { name = L["Buttons"], check = function() return addon.RefreshButtons end },
-            { name = L["Micro Menu"], check = function() return addon.RefreshMicromenu end },
-            { name = L["Minimap"], check = function() return addon.RefreshMinimap end },
-            { name = L["Target Frame"], check = function() return addon.RefreshTargetFrame end },
-            { name = L["Focus Frame"], check = function() return addon.RefreshFocusFrame end },
-            { name = L["Party Frames"], check = function() return addon.RefreshPartyFrames end },
-            { name = L["Stance Bar"], check = function() return addon.RefreshStance end },
-            { name = L["Pet Bar"], check = function() return addon.RefreshPetbar end },
-            { name = L["Cooldowns"], check = function() return addon.RefreshCooldowns end },
-            { name = L["Buff Frame"], check = function() return addon.RefreshBuffFrame end },
-            { name = L["Cast Bar"], check = function() return addon.RefreshCastbar end },
-        }
-        
-        for _, module in ipairs(modules) do
-            local status = module.check() and "|cFF00FF00" .. L["Loaded"] .. "|r" or "|cFFFF0000" .. L["Not Loaded"] .. "|r"
-            print(string.format("    %s: %s", module.name, status))
-        end
-    end
-    
+    addon.ModuleRegistry:PrintStatus()
+
     -- Show editable frames count
     if addon.EditableFrames then
         local count = 0
@@ -375,23 +350,9 @@ end
 local Commands = {}
 
 function Commands:RegisterCommands()
-    -- Register with AceConsole if available
-    if addon.core and addon.core.RegisterChatCommand then
-        -- Main commands
-        addon.core:RegisterChatCommand("mistui", SlashCommandHandler)
-        addon.core:RegisterChatCommand("mist", SlashCommandHandler)
-
-        -- Quick reload
-        addon.core:RegisterChatCommand("rl", ReloadUICommand)
-    else
-        -- Fallback to direct slash command registration
-        SLASH_MISTUI1 = "/mistui"
-        SLASH_MISTUI2 = "/mist"
-        SlashCmdList["MISTUI"] = SlashCommandHandler
-        
-        SLASH_MISTUIRL1 = "/rl"
-        SlashCmdList["MISTUIRL"] = ReloadUICommand
-    end
+    addon.core:RegisterChatCommand("mistui", SlashCommandHandler)
+    addon.core:RegisterChatCommand("mist", SlashCommandHandler)
+    addon.core:RegisterChatCommand("rl", ReloadUICommand)
 end
 
 -- Store reference for module access
@@ -401,18 +362,7 @@ addon.Commands = Commands
 -- INTEGRATION WITH CORE
 -- ============================================================================
 
--- Override the SlashCommand function in core.lua
--- This will be called from core.lua's OnEnable
+-- Called from the OnEnable in core.lua, once addon.core and its AceConsole embed exist.
 function addon.LoadCommands()
     Commands:RegisterCommands()
 end
-
--- Also expose individual handlers for other modules
-addon.CommandHandlers = {
-    OpenConfig = OpenConfig,
-    ToggleEditorMode = ToggleEditorMode,
-    ResetPositions = ResetPositions,
-    ShowStatus = ShowStatus,
-    ShowVersion = ShowVersion,
-    ShowHelp = ShowHelp
-}

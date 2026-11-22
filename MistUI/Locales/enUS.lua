@@ -39,7 +39,6 @@ L["Minimap module not available."] = true
 L["Editor mode not available."] = true
 L["Position editor not available."] = true
 L["Reset only supports resetting every position at once. Use /mistui reset."] = true
-L["Commands: /mistui config, /mistui edit"] = true
 L["Minimap module restored to stock defaults"] = true
 L["Targeting: %s"] = true
 L["XP: %d/%d"] = true
@@ -71,13 +70,7 @@ L["/rl - Reload UI"] = true
 -- ============================================================================
 
 L["=== MistUI Status ==="] = true
-L["Detected Modules:"] = true
 L["Loaded"] = true
-L["Not Loaded"] = true
-L["Target Frame"] = true
-L["Focus Frame"] = true
-L["Party Frames"] = true
-L["Cooldowns"] = true
 L["Editable Frames: "] = true
 L["MistUI Version: "] = true
 
@@ -343,9 +336,6 @@ L["ModuleRegistry: Module already registered -"] = true
 L["ModuleRegistry: Registered module -"] = true
 L["order:"] = true
 L["ModuleRegistry: Refresh failed for"] = true
-L["ModuleRegistry: Unknown module -"] = true
-L["ModuleRegistry: Enabled -"] = true
-L["ModuleRegistry: Disabled -"] = true
 L["CombatQueue:Add requires id and func"] = true
 L["CombatQueue: Registered PLAYER_REGEN_ENABLED"] = true
 L["CombatQueue: Queued operation -"] = true
@@ -416,8 +406,6 @@ L["Character Gold"] = true
 L["No other characters recorded yet"] = true
 L["(current)"] = true
 L["Total"] = true
-L["Stance Bar"] = true
-L["Pet Bar"] = true
 L["Micro Menu"] = true
 L["Main Bars"] = true
 L["Main action bars, status bars, scaling and positioning"] = true

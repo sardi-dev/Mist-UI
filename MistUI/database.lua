@@ -295,10 +295,6 @@ local defaults = {
                 button_order = "top_left"
             },
 
-            -- Legacy global spacing; kept as migration source for per-bar button_spacing
-            button_spacing = 7,
-            spacing_migrated = false,
-
             -- Per-bar scales
             scale_actionbar = 0.9,
             scale_rightbar = 0.9,

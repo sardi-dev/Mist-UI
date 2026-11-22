@@ -47,13 +47,6 @@ function addon.core:OnInitialize()
 
     addon:ApplyDatabaseMigrations()
 
-    -- Force defaults to be written to profile (check for specific key that should always exist)
-    if not addon.db.profile.mainbars or not addon.db.profile.mainbars.scale_actionbar then
-        -- Copy all defaults to profile to ensure they exist in SavedVariables
-        addon.DeepCopy(addon.defaults.profile, addon.db.profile);
-        addon:ApplyDatabaseMigrations()
-    end
-
     -- Register callbacks for configuration changes
     addon.db.RegisterCallback(addon, "OnProfileChanged", "RefreshConfig");
     addon.db.RegisterCallback(addon, "OnProfileCopied", "RefreshConfig");
@@ -92,13 +85,7 @@ function addon:SetDefaultProfileKey(key)
 end
 
 function addon.core:OnEnable()
-    -- Register slash commands (using new commands.lua system)
-    if addon.LoadCommands then
-        addon.LoadCommands()
-    else
-        -- Fallback to legacy registration
-        self:RegisterChatCommand("mistui", "SlashCommand")
-    end
+    addon.LoadCommands()
 
     -- Fire custom event to signal that MistUI is fully initialized
     -- This ensures modules get the correct config values
@@ -166,38 +153,5 @@ function addon:RefreshConfig()
         addon.core:ScheduleTimer(function()
             addon:RefreshRegisteredSystems()
         end, 2);
-    end
-end
-
--- Legacy SlashCommand handler (fallback if commands.lua not loaded)
-function addon.core:SlashCommand(input)
-    -- Delegate to new command system if available
-    if addon.CommandHandlers then
-        if not input or input:trim() == "" then
-            addon:ToggleOptionsUI()
-        elseif input:lower() == "config" then
-            addon:ToggleOptionsUI()
-        elseif input:lower() == "edit" or input:lower() == "editor" then
-            addon.CommandHandlers.ToggleEditorMode()
-        elseif input:lower() == "help" then
-            addon.CommandHandlers.ShowHelp()
-        else
-            addon.CommandHandlers.ShowHelp()
-        end
-    else
-        -- Original fallback
-        if not input or input:trim() == "" then
-            addon:ToggleOptionsUI()
-        elseif input:lower() == "config" then
-            addon:ToggleOptionsUI()
-        elseif input:lower() == "edit" or input:lower() == "editor" then
-            if addon.EditorMode then
-                addon.EditorMode:Toggle()
-            else
-                addon:Error(L["Editor mode not available."])
-            end
-        else
-            addon:Print(L["Commands: /mistui config, /mistui edit"])
-        end
     end
 end
