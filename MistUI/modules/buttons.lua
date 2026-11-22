@@ -230,12 +230,36 @@ function addon.MainSlotsFollowGrid()
     return (db and db.hide_main_bar_background and GetCVar('alwaysShowActionBars') ~= '1') and true or false
 end
 
--- The stock code counts the reasons to show empty slots in this attribute (a drag, the open
--- spellbook), and only its own calls change the count. One share is added, never the count reset.
-local function KeepGridShown(mainSlot)
-    if (mainSlot:GetAttribute('showgrid') or 0) < 1 then
-        mainSlot:SetAttribute('showgrid', 1)
+-- The stock code counts the reasons to show empty slots in the 'showgrid' attribute (a drag, the
+-- open spellbook), and only its own calls change the count. One share is added, never the count
+-- reset. The share is written by secure snippets: a value written by addon code would taint the
+-- stock ActionButton_Update that reads it, and that runs in combat on page and stance changes.
+local GRID_SNIPPET = [[
+    for slot = 1, %d do
+        local button = self:GetFrameRef("slot" .. slot)
+        local count = button and button:GetAttribute("showgrid") or 0
+        if button and %s then
+            button:SetAttribute("showgrid", %s)
+        end
     end
+]]
+local GRID_KEEP = GRID_SNIPPET:format(NUM_ACTIONBAR_BUTTONS, 'count < 1', '1')
+local GRID_RELEASE = GRID_SNIPPET:format(NUM_ACTIONBAR_BUTTONS, 'count > 0', 'count - 1')
+
+-- Out of combat only: frame refs and Execute are refused in combat.
+local function RunGridSnippet(snippet)
+    local keeper = ButtonsModule.gridKeeper
+    if not keeper then
+        keeper = CreateFrame('Frame', nil, UIParent, 'SecureHandlerBaseTemplate')
+        for slot = 1, NUM_ACTIONBAR_BUTTONS do
+            local mainSlot = NumberedGlobal('ActionButton', slot)
+            if mainSlot then
+                keeper:SetFrameRef('slot' .. slot, mainSlot)
+            end
+        end
+        ButtonsModule.gridKeeper = keeper
+    end
+    keeper:Execute(snippet)
 end
 
 function addon.RefreshButtonGrid()
@@ -245,18 +269,18 @@ function addon.RefreshButtonGrid()
         return
     end
     local follow = addon.MainSlotsFollowGrid()
+    if not follow then
+        RunGridSnippet(GRID_KEEP)
+    elseif ButtonsModule.mainGridForced then
+        -- Only the share a forced pass added goes, so a drag or the open spellbook keeps its own.
+        RunGridSnippet(GRID_RELEASE)
+    end
     for slot = 1, NUM_ACTIONBAR_BUTTONS do
         local mainSlot = NumberedGlobal('ActionButton', slot)
         if mainSlot and not follow then
-            KeepGridShown(mainSlot)
             ActionButton_ShowGrid(mainSlot)
         elseif mainSlot then
-            -- Only the share a forced pass added goes, so a drag or the open spellbook keeps its own.
             local count = mainSlot:GetAttribute('showgrid') or 0
-            if ButtonsModule.mainGridForced and count > 0 then
-                count = count - 1
-                mainSlot:SetAttribute('showgrid', count)
-            end
             if count == 0 and not (mainSlot.action and HasAction(mainSlot.action)) then
                 mainSlot:Hide()
             end
@@ -979,7 +1003,9 @@ function addon.RefreshButtons()
                     count:SetAlpha(db.count.show and 1 or 0)
                 end
 
-                ActionButton_Update(button)
+                -- The module's own restyle, not the stock ActionButton_Update: run from addon code,
+                -- that would write the stock button's event state tainted.
+                refreshSlotButton(button)
             end
         end
     end
@@ -1155,7 +1181,7 @@ local function SetupHooks()
         if not button or addon.MainSlotsFollowGrid() then return end
         local name = button:GetName()
         if name and name:match("^ActionButton%d+$") then
-            KeepGridShown(button)
+            RunGridSnippet(GRID_KEEP)
             if not button:GetAttribute('statehidden') then
                 button:Show()
             end

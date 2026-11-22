@@ -1093,6 +1093,42 @@ Phase("layout preset in combat", function()
     presets:GetStore()["Harness Layout"] = nil
 end)
 
+-- The stock button code reads 'showgrid' in combat, so addon code must not write it, and the
+-- stock ActionButton_Update must not be run from addon code.
+Phase("action buttons stay untainted", function()
+    local addon = H.namespaces.MistUI
+    local function FromAddon()
+        local caller = debug.getinfo(3, "S")
+        return caller and caller.source:find("MistUI", 1, true) ~= nil
+    end
+    local tainted = {}
+    local wrapped = {}
+    for slot = 1, 12 do
+        local button = _G["ActionButton" .. slot]
+        if button then
+            local setAttribute = button.SetAttribute
+            button:SetAttribute("showgrid", 0)
+            button.SetAttribute = function(self, key, ...)
+                if key == "showgrid" and FromAddon() then tainted[#tainted + 1] = self:GetName() .. " showgrid" end
+                return setAttribute(self, key, ...)
+            end
+            wrapped[#wrapped + 1] = button
+        end
+    end
+    local stockUpdate = ActionButton_Update
+    ActionButton_Update = function(button, ...)
+        if FromAddon() then tainted[#tainted + 1] = "ActionButton_Update" end
+        return stockUpdate(button, ...)
+    end
+    addon.RefreshButtonGrid()
+    addon.RefreshButtons()
+    ActionButton_Update = stockUpdate
+    for _, button in ipairs(wrapped) do button.SetAttribute = nil end
+    if #tainted > 0 then
+        H.Report("action buttons stay untainted", "addon code wrote: " .. table.concat(tainted, ", ", 1, math.min(#tainted, 4)))
+    end
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI

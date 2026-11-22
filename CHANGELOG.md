@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **Action buttons no longer taint the stock button code** (2026-11-22)
+  - Summary: The setting that keeps empty main bar slots visible is now written by secure code instead of addon code, and a settings refresh restyles the buttons itself instead of running the game's own button update.
+  - Why: The game's button update reads that setting in combat (page and stance changes), so a value written by the addon could block its later actions with "action blocked". Found in a code audit; a harness check now covers it. Needs an in-game check that empty main bar slots still show as before.
 - **Layout presets refuse to load in combat** (2026-11-22)
   - Summary: Loading a saved layout preset in combat now says frames cannot be moved in combat and changes nothing.
   - Why: It wrote the preset's positions into the saved settings first and only then refused to move the frames, so the screen and the saved positions no longer matched and frames jumped later. Found in a code audit; a harness check now covers it.
