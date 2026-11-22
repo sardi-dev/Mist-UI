@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **Layout presets refuse to load in combat** (2026-11-22)
+  - Summary: Loading a saved layout preset in combat now says frames cannot be moved in combat and changes nothing.
+  - Why: It wrote the preset's positions into the saved settings first and only then refused to move the frames, so the screen and the saved positions no longer matched and frames jumped later. Found in a code audit; a harness check now covers it.
 - **After-combat work runs in order and is never dropped** (2026-11-22)
   - Summary: The queue of changes that wait for the end of combat now runs them in the order they were queued, and keeps (and runs) work that one of them queues while the batch is running.
   - Why: It ran them in random order and then cleared the whole queue, so a change queued during the run was silently lost or an old one ran twice. Found in a code audit; a harness check now covers it.

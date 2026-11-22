@@ -672,6 +672,13 @@ function PositionPresets:Load(name)
         return false
     end
 
+    -- Checked before Restore writes the profile: in combat Apply refuses to move anything, which
+    -- would leave saved positions that do not match the screen.
+    if InCombatLockdown() then
+        addon:Print(L["Cannot move frames during combat!"])
+        return false
+    end
+
     if not self:Restore(entry.data) then
         return false
     end

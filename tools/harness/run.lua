@@ -1070,6 +1070,29 @@ Phase("combat queue order", function()
     end
 end)
 
+-- Loading a layout preset in combat changes nothing, not even the saved positions.
+Phase("layout preset in combat", function()
+    local addon = H.namespaces.MistUI
+    local presets = addon.PositionPresets
+    local tracker = addon.db.profile.questtracker
+    if not (presets and tracker and presets:Save("Harness Layout")) then
+        H.Report("layout preset in combat", "could not save a preset")
+        return
+    end
+    local savedX = tracker.x
+    tracker.x = 4321
+    H.inCombat = true
+    if presets:Load("Harness Layout") then
+        H.Report("layout preset in combat", "a preset loaded in combat")
+    end
+    if tracker.x ~= 4321 then
+        H.Report("layout preset in combat", "loading in combat rewrote the saved positions")
+    end
+    H.inCombat = false
+    tracker.x = savedX
+    presets:GetStore()["Harness Layout"] = nil
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI
