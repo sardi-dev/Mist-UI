@@ -657,6 +657,48 @@ Phase("bag filtered view and late item details", function()
     frame:Hide()
 end)
 
+Phase("bank quality borders", function()
+    local addon = H.namespaces.MistUI
+    local function Check(condition, message)
+        if not condition then H.Report("bank quality borders", message) end
+    end
+    if not (BankFrame and BankFrame.Show) then
+        H.Report("bank quality borders", "the stock bank frame is not there")
+        return
+    end
+    local moduleConfig = addon:GetModuleConfig("itemquality")
+    local wasEnabled = moduleConfig.enabled
+    moduleConfig.enabled = true
+    BankFrame:Show()
+
+    -- One repaint reads every main bank slot, so this module's reads of slot 1 count its repaints.
+    local repaints = 0
+    local savedLink = _G.GetContainerItemLink
+    _G.GetContainerItemLink = function(bag, slot)
+        if bag == BANK_CONTAINER and slot == 1 and debug.traceback():find("itemquality.lua", 1, true) then
+            repaints = repaints + 1
+        end
+        return savedLink(bag, slot)
+    end
+
+    H.Tick(2)
+    repaints = 0
+    for slot = 1, 10 do H.Fire("PLAYERBANKSLOTS_CHANGED", slot) end
+    H.Tick(3, 0.05)
+    Check(repaints >= 1, "the bank borders were not repainted after the bank slots changed")
+    Check(repaints == 1, "a burst of 10 bank slot events repainted " .. repaints .. " times, not once")
+
+    -- Opening the bank still repaints again later, for servers that send the slots late
+    repaints = 0
+    H.Fire("BANKFRAME_OPENED")
+    H.Tick(3, 0.05)
+    Check(repaints >= 2, "opening the bank did not repaint again for late slot data, got " .. repaints)
+
+    _G.GetContainerItemLink = savedLink
+    BankFrame:Hide()
+    moduleConfig.enabled = wasEnabled
+end)
+
 Phase("guild bank", function()
     H.state.guildTabs = 2
     H.Fire("PLAYER_GUILD_UPDATE")

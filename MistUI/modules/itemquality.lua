@@ -481,6 +481,22 @@ end
 -- INITIALIZATION
 -- ============================================================================
 
+-- Bank slot events arrive in bursts; one repaint per burst is enough.
+local pendingUpdates = {}
+
+local function Debounce(key, delay, callback)
+    if pendingUpdates[key] then return end
+    pendingUpdates[key] = true
+    addon:After(delay, function()
+        pendingUpdates[key] = nil
+        callback()
+    end)
+end
+
+local BANK_REPAINT_DELAY = 0.2
+-- Some servers send the bank slots after the bank window has opened.
+local BANK_LATE_REPAINT_DELAYS = { 0.5, 1.5 }
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -543,11 +559,12 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 
     elseif event == "BANKFRAME_OPENED" or event == "PLAYERBANKSLOTS_CHANGED" or event == "PLAYERBANKBAGSLOTS_CHANGED" then
         if not IsModuleEnabled() then return end
-        -- Call immediately AND schedule retries to handle servers that send
-        -- bank slot data asynchronously after BANKFRAME_OPENED fires.
-        UpdateBankSlots()
-        addon:After(0.5, UpdateBankSlots)
-        addon:After(1.5, UpdateBankSlots)
+        Debounce("bank", BANK_REPAINT_DELAY, UpdateBankSlots)
+        if event == "BANKFRAME_OPENED" then
+            for index, delay in ipairs(BANK_LATE_REPAINT_DELAYS) do
+                Debounce("bankLate" .. index, delay, UpdateBankSlots)
+            end
+        end
 
     elseif event == "UNIT_INVENTORY_CHANGED" then
         if not IsModuleEnabled() then return end

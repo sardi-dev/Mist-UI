@@ -27,6 +27,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Bank quality borders repaint once per burst of changes** (2026-11-22)
+  - Summary: The bank slot borders are now updated once after a burst of slot
+  - Why: Bank sorts and large moves caused dozens of needless repaints and
 - **Bag tabs and rarity filter pick up items whose details load late** (2026-11-22)
   - Summary: Items the game had not loaded yet now appear in a category tab or
   - Why: They stayed hidden from filtered views until the window was reopened.
