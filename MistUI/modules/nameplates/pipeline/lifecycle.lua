@@ -228,7 +228,11 @@ function NP.lifecycle.OnNewNameplate(plateData)
     plateData._isRegistered = true
 end
 
+-- The plate and its health bar both hook show and hide, and the client fires both for one show:
+-- the first one does the work, the second finds the state already switched. Either hook alone
+-- still works, e.g. when only the health bar is toggled.
 function NP.lifecycle.OnShowNameplate(plateData, reason)
+    if plateData._isVisible then return end
     plateData._isVisible = true
     NP.lifecycle.PrepareNameplate(plateData)
     NP.identity.RequestGroupTargetRefresh()
@@ -243,6 +247,7 @@ function NP.lifecycle.OnShowNameplate(plateData, reason)
 end
 
 function NP.lifecycle.OnHideNameplate(plateData, _reason)
+    if not plateData._isVisible then return end
     -- Preserve focus GUID through hide/show; no native re-acquire signal.
     local isFocusPlate = NP.identity and NP.identity.IsFocusPlate and NP.identity.IsFocusPlate(plateData)
     NP.lifecycle.InvalidatePlateVisuals(plateData, not isFocusPlate)

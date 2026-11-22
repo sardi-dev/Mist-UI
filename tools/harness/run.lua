@@ -1475,6 +1475,51 @@ Phase("nameplate cvars", function()
     addon:ApplyNameplatesSystem()
 end)
 
+-- The plate and its health bar both hook show and hide, and the client fires both: the show and hide
+-- work still runs once per show and once per hide.
+Phase("nameplate show hooks", function()
+    local NP = H.namespaces.MistUI.Nameplates
+    local data
+    for _, plateData in pairs(NP.module.plates) do
+        if plateData.plate:IsShown() and not data then data = plateData end
+    end
+    if not data then
+        H.Report("nameplate show hooks", "no plate was on screen to test with")
+        return
+    end
+    local shows, hides = 0, 0
+    local prepare, invalidate = NP.lifecycle.PrepareNameplate, NP.identity.InvalidatePlate
+    NP.lifecycle.PrepareNameplate = function(...) shows = shows + 1; return prepare(...) end
+    NP.identity.InvalidatePlate = function(...) hides = hides + 1; return invalidate(...) end
+    local function Expect(label, wantShows, wantHides)
+        if shows ~= wantShows or hides ~= wantHides then
+            H.Report("nameplate show hooks", ("%s: %d show and %d hide runs, expected %d and %d")
+                :format(label, shows, hides, wantShows, wantHides))
+        end
+        shows, hides = 0, 0
+    end
+    -- The client hides the plate, then its children, and shows them in the same order.
+    data.plate:Hide()
+    H.FireScript(data.healthBar, "OnHide")
+    Expect("plate hidden", 0, 1)
+    data.plate:Show()
+    H.FireScript(data.healthBar, "OnShow")
+    Expect("plate shown", 1, 0)
+    -- The children can come first.
+    H.FireScript(data.healthBar, "OnHide")
+    data.plate:Hide()
+    Expect("health bar first, hidden", 0, 1)
+    H.FireScript(data.healthBar, "OnShow")
+    data.plate:Show()
+    Expect("health bar first, shown", 1, 0)
+    -- Only the health bar toggles.
+    data.healthBar:Hide()
+    Expect("health bar hidden alone", 0, 1)
+    data.healthBar:Show()
+    Expect("health bar shown alone", 1, 0)
+    NP.lifecycle.PrepareNameplate, NP.identity.InvalidatePlate = prepare, invalidate
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")

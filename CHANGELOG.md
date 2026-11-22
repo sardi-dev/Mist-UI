@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Name plates reset once per show** (2026-11-22)
+  - Summary: A name plate that appears or disappears is now reset and cleaned up once instead of twice.
+  - Why: The duplicate work ran for every plate that came on screen. Found in a code audit.
 - **/mist nameplates and /mist worldmap use the Modules tab's switch** (2026-11-22)
   - Summary: Both commands now switch their module exactly like the Modules tab: a change that needs a reload shows the reload prompt and is only saved when you reload.
   - Why: They wrote the setting directly (the map) or switched hooks that cannot be removed until a reload (the nameplates), so the saved settings could describe something other than what was running. Found in a code audit; a harness check now covers it.
