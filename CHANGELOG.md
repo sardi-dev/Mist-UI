@@ -44,6 +44,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Removed
+- **Removed dead cast bar and button code** (2026-11-22)
+  - Summary: Removed a cast bar event branch that never ran, the timer fallbacks that never applied and a hotkey lookup for a method that does not exist.
+  - Why: A code audit found these paths could never run on the 5.4.8 client.
 - **Removed unused helpers and compat shims** (2026-11-22)
   - Summary: Removed helper functions nothing called and two shims that only older clients needed.
   - Why: A code audit found them with no callers or needed only for 3.3.5a.

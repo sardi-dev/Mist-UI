@@ -450,13 +450,6 @@ local function styleHotkey(button)
             end
         end
 
-        if button.GetHotkey then
-            local ok, resolved = pcall(button.GetHotkey, button)
-            if ok and resolved and resolved ~= '' then
-                return resolved
-            end
-        end
-
         if text and text ~= '' and (not RANGE_INDICATOR or text ~= RANGE_INDICATOR) then
             return preferCanonicalBinding and '' or text
         end

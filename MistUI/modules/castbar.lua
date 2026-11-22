@@ -1764,7 +1764,7 @@ function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell, _, eventCas
 end
 
 -- INTERRUPTED used to kill any active bar; gate on castID (or spell name for channels).
-function CastbarModule:HandleCastInterrupted_Simple(unitType, isChannel, eventSpell, _, eventCastID)
+function CastbarModule:HandleCastInterrupted_Simple(unitType, eventSpell, _, eventCastID)
     local frames = self.frames[unitType]
     if not frames or not frames.castbar then return end
     local castbar = frames.castbar
@@ -1778,7 +1778,7 @@ function CastbarModule:HandleCastInterrupted_Simple(unitType, isChannel, eventSp
         return
     end
 
-    self:HandleCastStop_Simple(unitType, true, isChannel)
+    self:HandleCastStop_Simple(unitType, true)
 end
 
 function CastbarModule:HandleCastDelayed_Simple(unitType, unit)
@@ -2302,9 +2302,7 @@ function CastbarModule:HandleCastingEvent(event, unit, ...)
     elseif event == 'UNIT_SPELLCAST_FAILED' then
         self:HandleCastFailed_Simple(unitType, ...)
     elseif event == 'UNIT_SPELLCAST_INTERRUPTED' then
-        self:HandleCastInterrupted_Simple(unitType, false, ...)
-    elseif event == 'UNIT_SPELLCAST_CHANNEL_INTERRUPTED' then
-        self:HandleCastInterrupted_Simple(unitType, true, ...)
+        self:HandleCastInterrupted_Simple(unitType, ...)
     elseif event == 'UNIT_SPELLCAST_DELAYED' or event == 'UNIT_SPELLCAST_CHANNEL_UPDATE' then
         self:HandleCastDelayed_Simple(unitType, unit)
     elseif event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE' then
@@ -2356,13 +2354,11 @@ function CastbarModule:RefreshCompanionLayout(unitType)
     end
 
     self:RefreshCastbar(unitType)
-    if addon and addon.core and addon.core.ScheduleTimer then
-        addon.core:ScheduleTimer(function()
-            if IsEnabled(unitType) then
-                CastbarModule:RefreshCastbar(unitType)
-            end
-        end, 0.05)
-    end
+    addon.core:ScheduleTimer(function()
+        if IsEnabled(unitType) then
+            CastbarModule:RefreshCastbar(unitType)
+        end
+    end, 0.05)
 end
 
 function CastbarModule:HandleTargetChanged()
@@ -3054,42 +3050,23 @@ local function OnEvent(self, event, unit, ...)
     elseif event == 'PLAYER_ENTERING_WORLD' then
         SetupStockLayoutHooks()
         -- Full protection for reload during combat
-        if addon.core and addon.core.ScheduleTimer then
-            -- Normal path with timers
-            addon.core:ScheduleTimer(function()
-                CastbarModule:RefreshCastbar("player")
-                CastbarModule:RefreshCastbar("target")
-                CastbarModule:RefreshCastbar("focus")
-                
-                addon.core:ScheduleTimer(function()
-                    if IsEnabled("player") then
-                        HideStockCastbar("player")
-                    end
-                    if IsEnabled("target") then
-                        HideStockCastbar("target")
-                    end
-                    if IsEnabled("focus") then
-                        HideStockCastbar("focus")
-                    end
-                end, 1.0)
-            end, 0.5)
-        else
-            -- Immediate fallback without timers (reload during combat)
+        addon.core:ScheduleTimer(function()
             CastbarModule:RefreshCastbar("player")
             CastbarModule:RefreshCastbar("target")
             CastbarModule:RefreshCastbar("focus")
-            
-            -- Second step also immediate
-            if IsEnabled("player") then
-                HideStockCastbar("player")
-            end
-            if IsEnabled("target") then
-                HideStockCastbar("target")
-            end
-            if IsEnabled("focus") then
-                HideStockCastbar("focus")
-            end
-        end
+
+            addon.core:ScheduleTimer(function()
+                if IsEnabled("player") then
+                    HideStockCastbar("player")
+                end
+                if IsEnabled("target") then
+                    HideStockCastbar("target")
+                end
+                if IsEnabled("focus") then
+                    HideStockCastbar("focus")
+                end
+            end, 1.0)
+        end, 0.5)
     elseif event == 'UNIT_SPELLCAST_SENT' then
         -- Latency tracking: record send time for player only
         if unit == "player" then
