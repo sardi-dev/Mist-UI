@@ -14,7 +14,9 @@ When adding new strings:
 ================================================================================
 ]]
 
-local L = LibStub("AceLocale-3.0-MistUI"):NewLocale("MistUI_Options", "enUS", true)
+-- Silent: the release is English only and every key is its English text, so a missing entry shows
+-- that text instead of raising an error; npm run check reports missing entries before a release.
+local L = LibStub("AceLocale-3.0-MistUI"):NewLocale("MistUI_Options", "enUS", true, true)
 if not L then return end
 
 -- ============================================================================

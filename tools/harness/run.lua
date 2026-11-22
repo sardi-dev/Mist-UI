@@ -1815,6 +1815,24 @@ Phase("layout string validation", function()
     widgets.harnessBogus = nil
 end)
 
+-- A text with no English entry shows itself instead of raising an error.
+Phase("missing texts stay quiet", function()
+    local addon = H.namespaces.MistUI
+    local L = addon.L
+    local LO = LibStub("AceLocale-3.0-MistUI"):GetLocale("MistUI_Options")
+    local before = #H.errors
+    local logged = #addon.ErrorLog.GetEntries()
+    if L["Harness text with no entry"] ~= "Harness text with no entry" then
+        H.Report("missing texts stay quiet", "a missing addon text did not show itself")
+    end
+    if LO["Harness option text with no entry"] ~= "Harness option text with no entry" then
+        H.Report("missing texts stay quiet", "a missing settings text did not show itself")
+    end
+    if #H.errors ~= before or #addon.ErrorLog.GetEntries() ~= logged then
+        H.Report("missing texts stay quiet", "a missing text raised an error")
+    end
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI
