@@ -1047,6 +1047,29 @@ Phase("player frame vehicle in combat", function()
     H.Tick(1)
 end)
 
+-- Work queued for the end of combat runs in the order it was queued, and work an operation
+-- queues while the batch runs is kept.
+Phase("combat queue order", function()
+    local queue = H.namespaces.MistUI.CombatQueue
+    local ran = {}
+    H.inCombat = true
+    H.Fire("PLAYER_REGEN_DISABLED")
+    for _, id in ipairs({ "harness_first", "harness_second", "harness_third", "harness_fourth" }) do
+        queue:Add(id, function()
+            ran[#ran + 1] = id
+            if id == "harness_second" then
+                queue:Add("harness_late", function() ran[#ran + 1] = "harness_late" end)
+            end
+        end)
+    end
+    H.inCombat = false
+    H.Fire("PLAYER_REGEN_ENABLED")
+    local got = table.concat(ran, ",")
+    if got ~= "harness_first,harness_second,harness_third,harness_fourth,harness_late" then
+        H.Report("combat queue order", "ran: " .. got)
+    end
+end)
+
 -- A specialization with its own profile offers the switch; nothing is offered while it is off.
 Phase("spec profiles", function()
     local addon = H.namespaces.MistUI

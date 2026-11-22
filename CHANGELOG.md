@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **After-combat work runs in order and is never dropped** (2026-11-22)
+  - Summary: The queue of changes that wait for the end of combat now runs them in the order they were queued, and keeps (and runs) work that one of them queues while the batch is running.
+  - Why: It ran them in random order and then cleared the whole queue, so a change queued during the run was silently lost or an old one ran twice. Found in a code audit; a harness check now covers it.
 - **Player frame layout waits for the end of combat in a vehicle** (2026-11-22)
   - Summary: Entering or leaving a vehicle in combat now only updates the player frame's art; the portrait, name, health bar and group icons are moved and sized once combat ends.
   - Why: Moving the parts of the protected player frame in combat can raise "action blocked", and vehicles are often entered mid-fight. Found in a code audit; a harness check now covers it.

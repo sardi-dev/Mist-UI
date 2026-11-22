@@ -1251,6 +1251,8 @@ end
 addon.CombatQueue = addon.CombatQueue or {
     -- Pending operations table: { [id] = { func, args } }
     pending = {},
+    -- Ids in the order they were first queued, so operations run in that order
+    order = {},
     -- Is the event frame registered?
     isRegistered = false,
     -- Event frame for PLAYER_REGEN_ENABLED
@@ -1258,6 +1260,7 @@ addon.CombatQueue = addon.CombatQueue or {
 }
 
 local CQ = addon.CombatQueue
+local MAX_QUEUE_PASSES = 3
 
 -- Initialize the combat queue event frame
 local function InitializeCombatQueueFrame()
@@ -1287,7 +1290,10 @@ function CQ:Add(id, func, ...)
     -- Initialize frame if needed
     InitializeCombatQueueFrame()
     
-    -- Store the operation with its arguments
+    -- Store the operation with its arguments; queuing an id again replaces it in place
+    if not self.pending[id] then
+        self.order[#self.order + 1] = id
+    end
     self.pending[id] = { func = func, args = {...} }
     
     -- Register for PLAYER_REGEN_ENABLED if not already
@@ -1308,6 +1314,12 @@ function CQ:Remove(id)
 
     if self.pending[id] then
         self.pending[id] = nil
+        for index, queued in ipairs(self.order) do
+            if queued == id then
+                table.remove(self.order, index)
+                break
+            end
+        end
         addon:Debug(L["CombatQueue: Removed operation -"], id)
     end
     
@@ -1325,27 +1337,37 @@ function CQ:HasPending(id)
 end
 
 -- Process all queued operations (called on PLAYER_REGEN_ENABLED)
-function CQ:ProcessQueue()
+function CQ:ProcessQueue(pass)
     local L = addon.L
 
-    addon:Debug(L["CombatQueue: Processing"], addon:tcount(self.pending), L["queued operations"])
-    
-    -- Process all pending operations
-    for id, operation in pairs(self.pending) do
+    addon:Debug(L["CombatQueue: Processing"], #self.order, L["queued operations"])
+
+    -- Take the batch first: an operation may queue more work, which must not be lost
+    local pending, order = self.pending, self.order
+    self.pending, self.order = {}, {}
+    for _, id in ipairs(order) do
+        local operation = pending[id]
         local success, err = pcall(function()
             operation.func(unpack(operation.args))
         end)
-        
+
         if not success then
             addon:Error(L["CombatQueue: Failed to execute"], id, "-", err)
         else
             addon:Debug(L["CombatQueue: Executed -"], id)
         end
     end
-    
-    -- Clear all pending operations
-    self.pending = {}
-    
+
+    -- Work queued during the batch: run it now (a few rounds at most, in case an operation keeps
+    -- queuing itself), or keep it for the next end of combat
+    if next(self.pending) then
+        pass = (pass or 1) + 1
+        if not InCombatLockdown() and pass <= MAX_QUEUE_PASSES then
+            return self:ProcessQueue(pass)
+        end
+        return
+    end
+
     -- Unregister the event
     if self.isRegistered then
         self.eventFrame:UnregisterEvent("PLAYER_REGEN_ENABLED")
