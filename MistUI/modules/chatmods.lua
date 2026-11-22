@@ -955,20 +955,12 @@ end
 -- URL DETECTION AND COPY
 -- ============================================================================
 
-local URL_TLDs = {
-    "[Cc][Oo][Mm]", "[Uu][Kk]", "[Nn][Ee][Tt]", "[Dd][Ee]", "[Ff][Rr]",
-    "[Ee][Ss]", "[Bb][Ee]", "[Cc][Cc]", "[Uu][Ss]", "[Kk][Oo]", "[Cc][Hh]",
-    "[Tt][Ww]", "[Cc][Nn]", "[Rr][Uu]", "[Gg][Rr]", "[Gg][Gg]", "[Ii][Tt]",
-    "[Ee][Uu]", "[Tt][Vv]", "[Nn][Ll]", "[Hh][Uu]", "[Oo][Rr][Gg]"
-}
-
-local URL_TLD_PATTERNS = {}
-for i = 1, #URL_TLDs do
-    URL_TLD_PATTERNS[i] = "(%S-%." .. URL_TLDs[i] .. "/?%S*)"
+local URL_TLDS = {}
+for tld in ("com uk net de fr es be cc us ko ch tw cn ru gr gg it eu tv nl hu org"):gmatch("%a+") do
+    URL_TLDS[tld] = true
 end
 
-local URL_IP_PATTERN = "(%d+%.%d+%.%d+%.%d+:?%d*/?%S*)"
-local URL_HYPERLINK_TEMPLATE = "|cffffffff|Hurl:%1|h[%1]|h|r"
+local URL_HYPERLINK_FORMAT = "|cffffffff|Hurl:%s|h[%s]|h|r"
 local URL_CHAT_EVENTS = {
     "CHAT_MSG_CHANNEL", "CHAT_MSG_YELL", "CHAT_MSG_GUILD",
     "CHAT_MSG_OFFICER", "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER",
@@ -976,24 +968,81 @@ local URL_CHAT_EVENTS = {
     "CHAT_MSG_WHISPER", "CHAT_MSG_BN_WHISPER", "CHAT_MSG_BN_CONVERSATION",
 }
 
+-- Punctuation around an address in a sentence is not part of it.
+local URL_SPLIT_PATTERN = "^([%(%[<{\"']*)(.-)([%.,;:!?%)%]>}\"']*)$"
+
+-- Escape sequences a chat line can hold, tried in this order at every "|". A full hyperlink or
+-- texture is skipped as one piece so the text inside it is never turned into a link.
+local URL_ESCAPE_PATTERNS = { "^|H.-|h.-|h", "^|T.-|t", "^|c%x%x%x%x%x%x%x%x" }
+
+local function IsAddress(candidate)
+    local lower = candidate:lower()
+    if lower:find("^%a[%w+%-.]*://%S") or lower:find("^www%.[%w%-]+%.%a") then
+        return true
+    end
+
+    local host, rest = lower:match("^([^/:]+)(.*)$")
+    if not host or not (rest == "" or rest:find("^/") or rest:find("^:%d+/?")) then
+        return false
+    end
+    if host:find("^%d%d?%d?%.%d%d?%d?%.%d%d?%d?%.%d%d?%d?$") then
+        return true
+    end
+    -- A domain is dot separated labels and ends in a known domain ending, so "ok.item" is not one.
+    local ending = host:match("^[%w%-]+[%w%-%.]*%.([%a]+)$")
+    return ending ~= nil and URL_TLDS[ending] == true and not host:find("%.%.")
+end
+
+local function LinkAddress(token)
+    local lead, candidate, trail = token:match(URL_SPLIT_PATTERN)
+    if candidate == "" or not IsAddress(candidate) then
+        return token
+    end
+    return lead .. format(URL_HYPERLINK_FORMAT, candidate, candidate) .. trail
+end
+
+local function LinkAddressesInText(text)
+    if not find(text, ".", 1, true) then return text end
+    return (gsub(text, "%S+", LinkAddress))
+end
+
+-- Links every address in the message and returns the new text, or nil when there is none.
+local function LinkAddresses(msg)
+    local parts, position, changed = {}, 1, false
+    while position <= #msg do
+        local bar = find(msg, "|", position, true)
+        local text = msg:sub(position, (bar or #msg + 1) - 1)
+        local linked = LinkAddressesInText(text)
+        changed = changed or linked ~= text
+        parts[#parts + 1] = linked
+        if not bar then break end
+
+        local escapeEnd = bar + 1
+        for _, pattern in ipairs(URL_ESCAPE_PATTERNS) do
+            local _, matchEnd = find(msg, pattern, bar)
+            if matchEnd then
+                escapeEnd = matchEnd
+                break
+            end
+        end
+        parts[#parts + 1] = msg:sub(bar, escapeEnd)
+        position = escapeEnd + 1
+    end
+    if changed then return table_concat(parts) end
+end
+
 local function URLFilter(self, event, msg, ...)
     if not msg then return end
     if not ChatModsModule.applied then
         return false, msg, ...
     end
+
     if not find(msg, ".", 1, true) then
         return
     end
 
-    for i = 1, #URL_TLD_PATTERNS do
-        local newmsg, found = gsub(msg, URL_TLD_PATTERNS[i], URL_HYPERLINK_TEMPLATE)
-        if found > 0 then
-            return false, newmsg, ...
-        end
-    end
-    -- IP address pattern
-    local newmsg, found = gsub(msg, URL_IP_PATTERN, URL_HYPERLINK_TEMPLATE)
-    if found > 0 then
+    local newmsg = LinkAddresses(msg)
+    if newmsg then
         return false, newmsg, ...
     end
 end

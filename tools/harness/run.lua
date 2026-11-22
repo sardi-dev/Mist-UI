@@ -1392,6 +1392,34 @@ Phase("chat afk dedup", function()
     end
 end)
 
+-- Chat links: real addresses become links, words with a dot do not, and colour codes stay balanced.
+Phase("chat url links", function()
+    local function Link(address)
+        return "|cffffffff|Hurl:" .. address .. "|h[" .. address .. "]|h|r"
+    end
+    local function Run(msg)
+        local _, out = H.RunChatFilters("CHAT_MSG_SAY", msg, "Harnessone")
+        return out
+    end
+    local function Expect(msg, expected)
+        local got = Run(msg)
+        if got ~= expected then
+            H.Report("chat url links", "'" .. msg .. "' became '" .. tostring(got) .. "', expected '" .. expected .. "'")
+        end
+    end
+    for _, word in ipairs({ "Mr.Compton", "ok.item", "no.It's", "see v1.2 now", "He said hi.Then left" }) do
+        Expect(word, word)
+    end
+    Expect("go to www.example.com now", "go to " .. Link("www.example.com") .. " now")
+    Expect("see example.com/a/b.", "see " .. Link("example.com/a/b") .. ".")
+    Expect("(http://example.org/x?y=1)", "(" .. Link("http://example.org/x?y=1") .. ")")
+    Expect("|cffff0000example.com|r tail", "|cffff0000" .. Link("example.com") .. "|r tail")
+    Expect("one.com and two.org", Link("one.com") .. " and " .. Link("two.org"))
+    Expect("join 10.0.0.5:8080/x", "join " .. Link("10.0.0.5:8080/x"))
+    local item = "|cff0070dd|Hitem:1:0|h[Some.com Sword]|h|r"
+    Expect(item .. " cheap", item .. " cheap")
+end)
+
 -- Edit mode boxes are labelled with the readable name from the locale.
 Phase("edit mode labels", function()
     local box = H.namespaces.MistUI.CreateUIFrame(10, 10, "PlayerFrame")

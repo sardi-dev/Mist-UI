@@ -15,6 +15,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Why: They ran code for every combat log event, which is heavy in a raid, even with every cast bar off, although only interrupts matter. Found in a code audit; a harness check now covers it.
 
 ### Fixed
+- **Chat links only for real addresses** (2026-11-22)
+  - Summary: Words such as "Mr.Compton" or "ok.item" are no longer turned into links, every address in a line is linked, and colour codes after an address stay intact.
+  - Why: False links, broken colours and wasted work on every chat line. Found in a code audit.
 - **Repeated away replies show again after a minute** (2026-11-22)
   - Summary: An away or do-not-disturb auto-reply is hidden only if the same player sent the same text in the last 60 seconds. Older entries are forgotten.
   - Why: A later identical reply was never shown for the rest of the session and the list kept growing. Found in a code audit.
